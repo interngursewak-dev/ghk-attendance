@@ -4,460 +4,827 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-title" content="GHK Attend">
-  <meta name="mobile-web-app-capable" content="yes">
   <title>GHK Attendance</title>
-  <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
   <style>
-    *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
     :root {
-      --black:#1a1a1a; --white:#fff; --grey:#f0f2f5;
-      --green:#155724; --green-bg:#d4edda; --green-btn:#1a7a3f;
-      --red:#721c24;   --red-bg:#f8d7da;   --red-btn:#c0392b;
-      --blue:#0c5460;  --blue-bg:#d1ecf1;
-      --amber:#856404; --amber-bg:#fff3cd;
-      --muted:#666;    --radius:10px;
+      --bg:        #07090e;
+      --surface:   #0d1018;
+      --surface2:  #131720;
+      --surface3:  #181e2a;
+      --border:    rgba(255,255,255,0.07);
+      --border2:   rgba(255,255,255,0.12);
+
+      --accent:    #00e87c;
+      --accent2:   rgba(0,232,124,0.15);
+      --accent3:   rgba(0,232,124,0.06);
+      --red:       #ff3355;
+      --red2:      rgba(255,51,85,0.15);
+      --blue:      #3b9eff;
+      --blue2:     rgba(59,158,255,0.15);
+      --amber:     #ffb300;
+      --amber2:    rgba(255,179,0,0.15);
+
+      --text:      #dde4f0;
+      --text2:     #6b7587;
+      --text3:     #363d4d;
+
+      --r:         10px;
+      --r2:        14px;
     }
-    html,body { min-height:100%; background:var(--grey); font-family:'Segoe UI',sans-serif; -webkit-font-smoothing:antialiased; }
-    .app { min-height:100vh; display:flex; flex-direction:column; align-items:center; padding:16px 14px 80px; }
 
-    /* Header */
-    .header { width:100%; max-width:400px; display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
-    .logo { font-size:1.05rem; font-weight:700; }
-    .logo span { color:#c00; }
-    .clock { font-size:1rem; font-weight:600; color:var(--muted); letter-spacing:1px; }
+    html, body { min-height: 100%; background: var(--bg); font-family: 'Syne', sans-serif; color: var(--text); -webkit-font-smoothing: antialiased; }
 
-    /* Card */
-    .card { width:100%; max-width:400px; background:var(--white); border:2px solid var(--black); border-radius:14px; overflow:hidden; box-shadow:4px 4px 0 var(--black); }
+    /* ── SUBTLE DOT GRID BACKGROUND ── */
+    body::before {
+      content: '';
+      position: fixed; inset: 0; z-index: 0;
+      background-image: radial-gradient(circle, rgba(255,255,255,0.04) 1px, transparent 1px);
+      background-size: 28px 28px;
+      pointer-events: none;
+    }
 
-    /* Camera */
-    .cam-wrap { position:relative; width:100%; height:0; padding-bottom:72%; background:#000; overflow:hidden; }
-    video { position:absolute; top:0; left:0; width:100%; height:100%; object-fit:cover; transform:scaleX(-1); }
-    .face-oval { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:140px; height:180px; border:2.5px dashed rgba(255,255,255,0.85); border-radius:50%; pointer-events:none; box-shadow:0 0 0 1000px rgba(0,0,0,0.38); display:none; }
+    .app { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; min-height: 100vh; padding: 0 12px 72px; }
 
-    /* Loading */
-    #ld-overlay { position:absolute; inset:0; background:rgba(0,0,0,0.85); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; padding:20px; text-align:center; z-index:10; }
-    #ld-text { color:#fff; font-size:0.88rem; font-weight:600; line-height:1.6; }
-    #ld-bar  { width:80%; height:6px; background:rgba(255,255,255,0.2); border-radius:10px; overflow:hidden; }
-    #ld-fill { height:100%; width:0%; background:#fff; border-radius:10px; transition:width 0.5s ease; }
+    /* ── HEADER ── */
+    .header {
+      width: 100%; max-width: 420px;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px 0 12px;
+    }
+    .logo { display: flex; align-items: center; gap: 8px; }
+    .logo-mark {
+      width: 34px; height: 34px; border-radius: 8px;
+      background: var(--accent); display: flex; align-items: center; justify-content: center;
+      font-size: 0.8rem; font-weight: 800; color: #000; letter-spacing: -0.5px;
+    }
+    .logo-text { line-height: 1.15; }
+    .logo-name { font-size: 0.92rem; font-weight: 700; color: var(--text); letter-spacing: 0.5px; }
+    .logo-sub  { font-size: 0.6rem; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: 1.5px; }
+    .clock {
+      font-family: 'Space Mono', monospace;
+      font-size: 1.05rem; font-weight: 700;
+      color: var(--accent); letter-spacing: 1px;
+    }
 
-    /* Status bar */
-    .sbar { display:flex; align-items:center; gap:8px; padding:11px 16px; border-bottom:1px solid #eee; font-size:0.84rem; font-weight:600; }
-    .dot { width:9px; height:9px; border-radius:50%; flex-shrink:0; }
-    .dot.green { background:#28a745; }
-    .dot.amber { background:#ffc107; animation:blink 1s infinite; }
-    .dot.red   { background:#dc3545; }
-    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+    /* ── CARD ── */
+    .card {
+      width: 100%; max-width: 420px;
+      background: var(--surface);
+      border: 1px solid var(--border2);
+      border-radius: var(--r2);
+      overflow: hidden;
+      box-shadow: 0 0 0 1px var(--border), 0 24px 48px rgba(0,0,0,0.6), 0 0 60px rgba(0,232,124,0.04);
+    }
 
-    /* Punch button — changes color based on expected action */
-    .panel { padding:16px 18px 22px; }
+    /* ── CAMERA ── */
+    .cam-wrap {
+      position: relative; width: 100%; padding-bottom: 72%; background: #000; overflow: hidden;
+    }
+    video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
+
+    /* Vignette overlay */
+    .cam-wrap::after {
+      content: '';
+      position: absolute; inset: 0; pointer-events: none;
+      background: radial-gradient(ellipse at center, transparent 45%, rgba(7,9,14,0.8) 100%);
+      z-index: 2;
+    }
+
+    /* Corner brackets */
+    .brk { position: absolute; width: 22px; height: 22px; z-index: 5; transition: opacity 0.3s; }
+    .brk.tl { top: 14px; left: 14px; border-top: 2px solid var(--accent); border-left: 2px solid var(--accent); border-radius: 3px 0 0 0; }
+    .brk.tr { top: 14px; right: 14px; border-top: 2px solid var(--accent); border-right: 2px solid var(--accent); border-radius: 0 3px 0 0; }
+    .brk.bl { bottom: 14px; left: 14px; border-bottom: 2px solid var(--accent); border-left: 2px solid var(--accent); border-radius: 0 0 0 3px; }
+    .brk.br { bottom: 14px; right: 14px; border-bottom: 2px solid var(--accent); border-right: 2px solid var(--accent); border-radius: 0 0 3px 0; }
+
+    /* Face reticle */
+    .reticle {
+      position: absolute; z-index: 4;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -56%);
+      width: 144px; height: 186px;
+      border: 1.5px solid rgba(0,232,124,0.5);
+      border-radius: 50%;
+      box-shadow: 0 0 0 2000px rgba(7,9,14,0.5);
+      transition: border-color 0.3s, box-shadow 0.3s;
+    }
+    .reticle.scanning {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2000px rgba(7,9,14,0.55), 0 0 24px rgba(0,232,124,0.4);
+    }
+    /* Small tick marks at N/S/E/W */
+    .reticle::before, .reticle::after {
+      content: ''; position: absolute; background: var(--accent);
+    }
+    .reticle::before { top: -1px; left: 50%; transform: translateX(-50%); width: 12px; height: 2px; border-radius: 1px; }
+    .reticle::after  { bottom: -1px; left: 50%; transform: translateX(-50%); width: 12px; height: 2px; border-radius: 1px; }
+    .tick-l, .tick-r { position: absolute; background: var(--accent); width: 2px; height: 12px; border-radius: 1px; top: 50%; transform: translateY(-50%); z-index: 5; }
+    .tick-l { left: -1px; } .tick-r { right: -1px; }
+
+    /* Scan line */
+    .scan-line {
+      position: absolute; z-index: 6;
+      left: 50%; transform: translateX(-50%);
+      width: 144px; height: 2px;
+      background: linear-gradient(90deg, transparent 0%, var(--accent) 30%, #fff 50%, var(--accent) 70%, transparent 100%);
+      box-shadow: 0 0 10px var(--accent), 0 0 20px rgba(0,232,124,0.5);
+      display: none;
+      animation: scanline 1.15s ease-in-out infinite;
+    }
+    @keyframes scanline {
+      0%,100% { top: 8%; }
+      50%      { top: 78%; }
+    }
+
+    /* Scan label */
+    .scan-label {
+      position: absolute; bottom: 70px; left: 50%; transform: translateX(-50%);
+      font-family: 'Space Mono', monospace; font-size: 0.6rem; font-weight: 700;
+      color: var(--accent); letter-spacing: 2px; text-transform: uppercase;
+      display: none; z-index: 7; white-space: nowrap;
+      text-shadow: 0 0 10px var(--accent);
+    }
+
+    /* Loading bar (bottom of camera) */
+    .load-banner {
+      position: absolute; bottom: 0; left: 0; right: 0; z-index: 8;
+      background: linear-gradient(transparent, rgba(7,9,14,0.95));
+      padding: 24px 16px 12px;
+    }
+    .load-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+    .load-txt { font-family: 'Space Mono', monospace; font-size: 0.65rem; color: var(--text2); letter-spacing: 0.5px; }
+    .load-pct { font-family: 'Space Mono', monospace; font-size: 0.65rem; color: var(--accent); font-weight: 700; }
+    .load-track { height: 2px; background: rgba(255,255,255,0.08); border-radius: 1px; }
+    .load-fill { height: 100%; background: var(--accent); border-radius: 1px; width: 0%; transition: width 0.5s ease; box-shadow: 0 0 8px var(--accent); }
+
+    /* ── STATUS BAR ── */
+    .sbar {
+      display: flex; align-items: center; gap: 8px;
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface2);
+    }
+    .sdot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+    .sdot.green { background: var(--accent); box-shadow: 0 0 8px var(--accent); }
+    .sdot.amber { background: var(--amber); box-shadow: 0 0 8px var(--amber); animation: blink 1.2s infinite; }
+    .sdot.red   { background: var(--red);   box-shadow: 0 0 8px var(--red); }
+    @keyframes blink { 0%,100%{ opacity:1 } 50%{ opacity:0.2 } }
+    .stext {
+      font-family: 'Space Mono', monospace;
+      font-size: 0.68rem; color: var(--text2); letter-spacing: 0.3px; flex: 1;
+    }
+
+    /* ── PANEL ── */
+    .panel { padding: 18px 16px 20px; }
+    .hidden { display: none !important; }
+
+    /* Prompt text */
+    .cam-prompt {
+      font-size: 0.7rem; font-weight: 600; color: var(--text2);
+      text-align: center; margin-bottom: 14px; letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+
+    /* ── PUNCH BUTTON ── */
     .btn-punch {
-      display:block; width:100%; padding:16px;
-      border:2px solid var(--black); border-radius:var(--radius);
-      font-size:1.05rem; font-weight:700; cursor:pointer; text-align:center;
-      margin-bottom:10px; transition:all 0.25s; color:#fff;
-      -webkit-tap-highlight-color:transparent;
-      background: var(--green-btn);
-      border-color: var(--green-btn);
+      width: 100%; padding: 18px 20px;
+      background: var(--accent3);
+      border: 1.5px solid var(--accent);
+      border-radius: var(--r);
+      color: var(--accent);
+      font-family: 'Syne', sans-serif;
+      font-size: 1rem; font-weight: 700;
+      letter-spacing: 2px; text-transform: uppercase;
+      cursor: pointer;
+      position: relative; overflow: hidden;
+      transition: background 0.2s, box-shadow 0.2s, transform 0.1s;
+      animation: glowpulse 3s ease-in-out infinite;
     }
-    .btn-punch.out-mode {
-      background: var(--red-btn);
-      border-color: var(--red-btn);
+    .btn-punch::before {
+      content: '';
+      position: absolute; inset: 0;
+      background: var(--accent);
+      transform: scaleX(0); transform-origin: left;
+      transition: transform 0.18s ease;
+      z-index: 0;
     }
-    .btn-punch:disabled { background:#aaa; border-color:#aaa; cursor:not-allowed; }
-    .btn-punch:active:not(:disabled) { transform:scale(0.97); }
+    .btn-punch span { position: relative; z-index: 1; }
+    .btn-punch:active:not(:disabled)::before { transform: scaleX(1); }
+    .btn-punch:active:not(:disabled) { color: #000; transform: scale(0.985); }
+    .btn-punch:disabled {
+      background: transparent; border-color: var(--text3); color: var(--text3);
+      cursor: not-allowed; animation: none; box-shadow: none;
+    }
+    @keyframes glowpulse {
+      0%,100% { box-shadow: 0 0 16px rgba(0,232,124,0.12); }
+      50%      { box-shadow: 0 0 28px rgba(0,232,124,0.28); }
+    }
 
-    /* Punch hint pill */
-    .punch-hint {
-      text-align:center; font-size:0.75rem; font-weight:600;
-      color:var(--muted); margin-bottom:14px; letter-spacing:0.3px;
+    /* ── ALERT ── */
+    .alert {
+      margin-top: 12px; padding: 10px 14px; border-radius: 8px;
+      font-size: 0.78rem; font-weight: 600; line-height: 1.5; display: none;
     }
-    .punch-hint span {
-      display:inline-block; padding:3px 10px;
-      border-radius:20px; background:#f0f0f0;
+    .alert.show    { display: block; }
+    .alert.success { background: var(--accent2); color: var(--accent); border: 1px solid rgba(0,232,124,0.25); }
+    .alert.error   { background: var(--red2);    color: var(--red);    border: 1px solid rgba(255,51,85,0.25); }
+    .alert.info    { background: var(--blue2);   color: var(--blue);   border: 1px solid rgba(59,158,255,0.25); }
+    .alert.warning { background: var(--amber2);  color: var(--amber);  border: 1px solid rgba(255,179,0,0.25); }
+
+    /* ── FORM (REGISTER) ── */
+    .flabel {
+      display: block; font-size: 0.62rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 1.5px; color: var(--text2); margin-bottom: 6px;
+    }
+    .finput {
+      width: 100%; padding: 13px 14px;
+      background: var(--surface2); border: 1px solid var(--border2);
+      border-radius: var(--r); color: var(--text);
+      font-family: 'Syne', sans-serif; font-size: 0.92rem; outline: none;
+      margin-bottom: 12px; transition: border-color 0.2s;
+    }
+    .finput:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(0,232,124,0.08); }
+    .finput::placeholder { color: var(--text3); }
+
+    .reg-tip {
+      font-size: 0.7rem; color: var(--text2); line-height: 1.6;
+      padding: 10px 12px; background: var(--surface3); border-radius: 8px;
+      border-left: 2px solid var(--accent); margin-bottom: 12px;
     }
 
     .btn {
-      display:block; width:100%; padding:13px;
-      border:2px solid var(--black); border-radius:var(--radius);
-      font-size:0.95rem; font-weight:700; cursor:pointer;
-      background:var(--white); color:var(--black);
-      margin-bottom:10px; text-align:center;
-      -webkit-tap-highlight-color:transparent;
-      transition:transform 0.1s;
+      display: block; width: 100%;
+      padding: 14px 20px;
+      border-radius: var(--r);
+      font-family: 'Syne', sans-serif; font-size: 0.9rem; font-weight: 700;
+      cursor: pointer; text-align: center; letter-spacing: 0.5px;
+      transition: transform 0.1s, opacity 0.2s;
+      -webkit-tap-highlight-color: transparent;
     }
-    .btn:last-child { margin-bottom:0; }
-    .btn:active:not(:disabled) { transform:scale(0.97); }
-    .btn:disabled { background:#e9ecef; border-color:#aaa; color:#aaa; cursor:not-allowed; }
-    .btn.primary { background:var(--black); color:var(--white); }
+    .btn:active { transform: scale(0.97); }
+    .btn.primary {
+      background: var(--accent); color: #000; border: none; margin-bottom: 8px;
+    }
+    .btn.ghost {
+      background: transparent; color: var(--text2);
+      border: 1px solid var(--border2);
+    }
+    .btn.ghost:hover { border-color: var(--border); color: var(--text); }
 
-    .flabel { display:block; font-size:0.72rem; font-weight:700; text-transform:uppercase; letter-spacing:0.8px; color:var(--muted); margin-bottom:5px; }
-    .finput { width:100%; padding:12px 13px; border:2px solid #ccc; border-radius:var(--radius); font-size:0.95rem; outline:none; margin-bottom:12px; }
-    .finput:focus { border-color:var(--black); }
+    /* ── BOTTOM NAV ── */
+    .bottom-nav {
+      position: fixed; bottom: 0; left: 0; right: 0; height: 62px;
+      background: rgba(13,16,24,0.96);
+      backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+      border-top: 1px solid var(--border2);
+      display: flex; z-index: 100;
+    }
+    .nav-btn {
+      flex: 1; border: none; background: none; cursor: pointer;
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+      color: var(--text3); font-family: 'Syne', sans-serif;
+      font-size: 0.6rem; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase;
+      -webkit-tap-highlight-color: transparent; transition: color 0.15s;
+      position: relative;
+    }
+    .nav-btn:active { opacity: 0.7; }
+    .nav-btn.active { color: var(--accent); }
+    .nav-btn.active::before {
+      content: ''; position: absolute; top: 0; left: 20%; right: 20%;
+      height: 2px; background: var(--accent); border-radius: 0 0 2px 2px;
+      box-shadow: 0 0 8px var(--accent);
+    }
+    .nav-icon { font-size: 1.25rem; line-height: 1; }
 
-    .alert { padding:11px 13px; border-radius:8px; font-size:0.85rem; font-weight:600; margin-top:12px; line-height:1.5; display:none; }
-    .alert.show    { display:block; }
-    .alert.success { background:var(--green-bg); color:var(--green); border:1px solid #c3e6cb; }
-    .alert.error   { background:var(--red-bg);   color:var(--red);   border:1px solid #f5c6cb; }
-    .alert.info    { background:var(--blue-bg);  color:var(--blue);  border:1px solid #bee5eb; }
-    .alert.warning { background:var(--amber-bg); color:var(--amber); border:1px solid #ffeeba; }
+    /* ── REPORT SECTION ── */
+    #report-section { display: none; width: 100%; max-width: 420px; margin-top: 12px; }
+    .rcard {
+      background: var(--surface); border: 1px solid var(--border2);
+      border-radius: var(--r2); padding: 16px;
+      box-shadow: 0 16px 40px rgba(0,0,0,0.5);
+    }
+    .rcard-head {
+      display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;
+    }
+    .rcard-title { font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--text2); }
+    .rcard-count {
+      font-family: 'Space Mono', monospace; font-size: 2.2rem; font-weight: 700;
+      color: var(--accent); text-align: center; margin: 4px 0 2px;
+    }
+    .rcard-sub { font-size: 0.65rem; color: var(--text2); text-align: center; margin-bottom: 14px; letter-spacing: 0.5px; text-transform: uppercase; }
 
-    /* Report */
-    #report-section { display:none; width:100%; max-width:400px; margin-top:14px; }
-    .rcard { background:var(--white); border:2px solid var(--black); border-radius:12px; padding:16px; box-shadow:3px 3px 0 var(--black); }
-    .rcard h3 { font-size:0.95rem; font-weight:700; margin-bottom:10px; }
-    .rbig { font-size:2.5rem; font-weight:800; text-align:center; }
-    .rsub { font-size:0.75rem; color:var(--muted); text-align:center; margin-bottom:12px; }
-    .rrow { display:grid; grid-template-columns:1fr auto auto; gap:8px; align-items:center; padding:7px 0; border-bottom:1px solid #eee; font-size:0.82rem; }
-    .rrow:last-child { border-bottom:none; }
-    .rrow .rname { font-weight:600; }
-    .rrow .rtimes { color:var(--muted); font-size:0.78rem; }
-    .rrow .rhours { font-size:0.75rem; font-weight:700; padding:2px 7px; border-radius:20px; background:#e8f5e9; color:var(--green); white-space:nowrap; }
-    .badge-in  { display:inline-block; padding:2px 8px; border-radius:20px; font-size:0.72rem; font-weight:700; background:#d4edda; color:var(--green); }
-    .badge-out { display:inline-block; padding:2px 8px; border-radius:20px; font-size:0.72rem; font-weight:700; background:#f8d7da; color:var(--red); }
+    .rrow {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 9px 0; border-bottom: 1px solid var(--border);
+    }
+    .rrow:last-child { border-bottom: none; }
+    .rrow-left { flex: 1; }
+    .rname { font-size: 0.82rem; font-weight: 700; color: var(--text); margin-bottom: 3px; }
+    .rtimes { display: flex; gap: 6px; align-items: center; }
 
-    /* Success screen */
-    #success-screen { display:none; position:fixed; inset:0; background:#fff; z-index:200; flex-direction:column; align-items:center; justify-content:center; padding:32px 24px; text-align:center; }
-    #success-screen.show { display:flex; }
-    .ss-circle { width:130px; height:130px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:3.5rem; margin-bottom:20px; animation:pop 0.45s cubic-bezier(0.34,1.56,0.64,1); border:3px solid var(--black); }
-    .ss-circle.in-circle  { background:#d4edda; border-color:var(--green-btn); }
-    .ss-circle.out-circle { background:#f8d7da; border-color:var(--red-btn); }
-    .ss-circle.reg-circle { background:#d1ecf1; border-color:#0c5460; }
-    .ss-badge { display:inline-block; padding:4px 14px; border-radius:20px; font-size:0.78rem; font-weight:800; letter-spacing:1px; text-transform:uppercase; margin-bottom:12px; }
-    .ss-badge.in  { background:#d4edda; color:var(--green); }
-    .ss-badge.out { background:#f8d7da; color:var(--red); }
-    .ss-badge.reg { background:#d1ecf1; color:var(--blue); }
-    .ss-name  { font-size:1.4rem; font-weight:800; margin-bottom:6px; color:var(--black); }
-    .ss-time  { font-size:0.9rem; color:var(--muted); margin-bottom:8px; }
-    .ss-hours { font-size:1.1rem; font-weight:700; color:var(--green); margin-bottom:28px; padding:8px 20px; background:#d4edda; border-radius:30px; display:none; }
-    .ss-back  { width:100%; max-width:300px; padding:15px; background:var(--black); color:#fff; border:none; border-radius:var(--radius); font-size:1rem; font-weight:700; cursor:pointer; -webkit-tap-highlight-color:transparent; }
-    @keyframes pop { from{transform:scale(0.3);opacity:0} to{transform:scale(1);opacity:1} }
+    .tbadge {
+      display: inline-flex; align-items: center; gap: 4px;
+      font-family: 'Space Mono', monospace; font-size: 0.62rem; font-weight: 700;
+      padding: 2px 7px; border-radius: 4px;
+    }
+    .tbadge.in  { background: var(--accent2); color: var(--accent); }
+    .tbadge.out { background: var(--red2);    color: var(--red); }
+    .tbadge.none { color: var(--text3); font-size: 0.6rem; }
 
-    .hidden { display:none !important; }
+    .rhours {
+      font-family: 'Space Mono', monospace; font-size: 0.65rem; font-weight: 700;
+      color: var(--accent); padding: 3px 8px; background: var(--accent3);
+      border-radius: 4px; white-space: nowrap; margin-left: 8px;
+      border: 1px solid rgba(0,232,124,0.15);
+    }
+
+    /* ── SUCCESS SCREEN ── */
+    #ss {
+      display: none; position: fixed; inset: 0; z-index: 200;
+      background: var(--bg); flex-direction: column; align-items: center; justify-content: center;
+      padding: 32px 24px; text-align: center;
+    }
+    #ss.show { display: flex; }
+
+    .ss-ring {
+      width: 140px; height: 140px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 3.5rem; margin-bottom: 24px; position: relative;
+      animation: popin 0.5s cubic-bezier(0.34,1.56,0.64,1);
+    }
+    .ss-ring::before {
+      content: ''; position: absolute; inset: -4px; border-radius: 50%;
+      border: 2px solid transparent; animation: spinring 2s linear infinite;
+    }
+    .ss-ring.in  { background: var(--accent2); }
+    .ss-ring.in::before  { border-top-color: var(--accent); border-right-color: var(--accent); box-shadow: 0 0 24px rgba(0,232,124,0.3); }
+    .ss-ring.out { background: var(--red2); }
+    .ss-ring.out::before { border-top-color: var(--red); border-right-color: var(--red); box-shadow: 0 0 24px rgba(255,51,85,0.3); }
+    .ss-ring.reg { background: var(--blue2); }
+    .ss-ring.reg::before { border-top-color: var(--blue); border-right-color: var(--blue); box-shadow: 0 0 24px rgba(59,158,255,0.3); }
+
+    @keyframes popin { from { transform: scale(0.2); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+    @keyframes spinring { to { transform: rotate(360deg); } }
+
+    .ss-tag {
+      font-size: 0.62rem; font-weight: 700; letter-spacing: 2px; text-transform: uppercase;
+      padding: 4px 14px; border-radius: 20px; margin-bottom: 14px;
+    }
+    .ss-tag.in  { background: var(--accent2); color: var(--accent); border: 1px solid rgba(0,232,124,0.3); }
+    .ss-tag.out { background: var(--red2);    color: var(--red);    border: 1px solid rgba(255,51,85,0.3); }
+    .ss-tag.reg { background: var(--blue2);   color: var(--blue);   border: 1px solid rgba(59,158,255,0.3); }
+
+    .ss-name { font-size: 1.5rem; font-weight: 800; margin-bottom: 6px; color: var(--text); }
+    .ss-time { font-family: 'Space Mono', monospace; font-size: 0.78rem; color: var(--text2); margin-bottom: 8px; }
+    .ss-hours {
+      display: none; font-family: 'Space Mono', monospace;
+      font-size: 0.85rem; font-weight: 700; color: var(--accent);
+      padding: 8px 20px; background: var(--accent3); border-radius: 30px;
+      margin-bottom: 8px; border: 1px solid rgba(0,232,124,0.2);
+    }
+    .ss-conf { font-size: 0.68rem; color: var(--text3); margin-bottom: 28px; font-family: 'Space Mono', monospace; }
+    .ss-back {
+      width: 100%; max-width: 300px; padding: 16px;
+      background: var(--surface2); color: var(--text);
+      border: 1px solid var(--border2); border-radius: var(--r);
+      font-family: 'Syne', sans-serif; font-size: 0.92rem; font-weight: 700;
+      cursor: pointer; letter-spacing: 0.5px;
+      transition: background 0.2s, border-color 0.2s;
+    }
+    .ss-back:active { background: var(--surface3); }
+
+    /* ── DIVIDER ── */
+    .divider {
+      height: 1px; background: var(--border); margin: 14px 0;
+    }
   </style>
 </head>
 <body>
+
 <div class="app">
 
+  <!-- HEADER -->
   <div class="header">
-    <div class="logo">GHK <span>Lab</span> Attendance</div>
-    <div class="clock" id="clock">--:-- --</div>
+    <div class="logo">
+      <div class="logo-mark">GHK</div>
+      <div class="logo-text">
+        <div class="logo-name">Lab Attendance</div>
+        <div class="logo-sub">Biometric System</div>
+      </div>
+    </div>
+    <div class="clock" id="clock">--:--</div>
   </div>
 
+  <!-- MAIN CARD -->
   <div class="card">
+
+    <!-- Camera -->
     <div class="cam-wrap">
       <video id="video" autoplay muted playsinline webkit-playsinline></video>
-      <div class="face-oval" id="oval"></div>
-      <div id="ld-overlay">
-        <div style="font-size:2.2rem">🧠</div>
-        <div id="ld-text">Loading AI models…<br>Please wait</div>
-        <div id="ld-bar"><div id="ld-fill"></div></div>
+
+      <!-- Corner brackets -->
+      <span class="brk tl"></span>
+      <span class="brk tr"></span>
+      <span class="brk bl"></span>
+      <span class="brk br"></span>
+
+      <!-- Face reticle with ticks -->
+      <div class="reticle" id="reticle">
+        <span class="tick-l"></span>
+        <span class="tick-r"></span>
+      </div>
+
+      <!-- Green scan line (shows during detection) -->
+      <div class="scan-line" id="scan-bar"></div>
+
+      <!-- Monospace scan label -->
+      <div class="scan-label" id="scan-label">Scanning…</div>
+
+      <!-- Loading progress (bottom of camera) -->
+      <div class="load-banner" id="load-banner">
+        <div class="load-row">
+          <span class="load-txt" id="load-txt">Initialising…</span>
+          <span class="load-pct" id="load-pct">0%</span>
+        </div>
+        <div class="load-track"><div class="load-fill" id="load-fill"></div></div>
       </div>
     </div>
 
+    <!-- Status -->
     <div class="sbar">
-      <div class="dot amber" id="sdot"></div>
-      <span id="stext">Starting up…</span>
+      <div class="sdot amber" id="sdot"></div>
+      <span class="stext" id="stext">Starting camera…</span>
     </div>
 
-    <!-- Attendance panel -->
+    <!-- ATTENDANCE PANEL -->
     <div class="panel" id="panel-attend">
-      <div class="punch-hint"><span id="punch-hint-text">🟢 Next punch = IN</span></div>
-      <button class="btn-punch" id="btn-punch">✅  Mark Attendance</button>
-      <button class="btn" id="btn-new-user">＋  Add New Staff</button>
-      <button class="btn" id="btn-report">📋  Today's Report</button>
+      <div class="cam-prompt">Centre your face · Hold still · Tap to scan</div>
+      <button class="btn-punch" id="btn-punch" disabled>
+        <span>⏳&nbsp; Loading AI Models…</span>
+      </button>
       <div class="alert" id="alert-attend"></div>
     </div>
 
-    <!-- Register panel -->
+    <!-- REGISTER PANEL -->
     <div class="panel hidden" id="panel-register">
-      <label class="flabel" for="reg-name">Staff Full Name</label>
+      <label class="flabel" for="reg-name">Full Name</label>
       <input type="text" id="reg-name" class="finput" placeholder="e.g. Rahul Sharma" autocomplete="off">
-      <button class="btn primary" id="btn-save">📸  Scan &amp; Save Face</button>
-      <button class="btn" id="btn-cancel">←  Cancel / Go Back</button>
+      <div class="reg-tip">📸 Face the camera clearly. The system captures <strong style="color:var(--accent)">5 frames</strong> and averages them for maximum accuracy.</div>
+      <button class="btn primary" id="btn-save">📸&nbsp; Scan &amp; Save Face</button>
+      <button class="btn ghost"   id="btn-cancel">← Cancel</button>
       <div class="alert" id="alert-reg"></div>
     </div>
-  </div>
 
-  <!-- Report -->
+  </div><!-- /card -->
+
+  <!-- REPORT -->
   <div id="report-section">
     <div class="rcard">
-      <h3>📋 Today's Attendance</h3>
-      <div class="rbig" id="rpt-count">…</div>
-      <div class="rsub">Staff Present Today</div>
+      <div class="rcard-head">
+        <span class="rcard-title">Today's Attendance</span>
+        <button class="btn ghost" id="btn-close-rpt" style="width:auto;padding:6px 14px;font-size:0.72rem;">✕ Close</button>
+      </div>
+      <div class="rcard-count" id="rpt-count">—</div>
+      <div class="rcard-sub">Staff present today</div>
+      <div class="divider"></div>
       <div id="rpt-list"></div>
-      <button class="btn" id="btn-close-rpt" style="margin-top:12px;">Close Report</button>
     </div>
   </div>
 
-</div>
+</div><!-- /app -->
 
-<!-- Success screen -->
-<div id="success-screen">
-  <div class="ss-circle" id="ss-circle">✅</div>
-  <div class="ss-badge"  id="ss-badge">IN</div>
-  <div class="ss-name"   id="ss-name"></div>
-  <div class="ss-time"   id="ss-time"></div>
-  <div class="ss-hours"  id="ss-hours"></div>
-  <button class="ss-back" onclick="closeSuccess()">← Next Person</button>
+<!-- BOTTOM NAV -->
+<nav class="bottom-nav">
+  <button class="nav-btn active" id="nav-home" onclick="goHome()">
+    <span class="nav-icon">🏠</span>Home
+  </button>
+  <button class="nav-btn" id="nav-add" onclick="goAdd()">
+    <span class="nav-icon">➕</span>Add Staff
+  </button>
+  <button class="nav-btn" id="nav-report" onclick="goReport()">
+    <span class="nav-icon">📋</span>Report
+  </button>
+</nav>
+
+<!-- SUCCESS SCREEN -->
+<div id="ss">
+  <div class="ss-ring in" id="ss-ring">✅</div>
+  <div class="ss-tag in"  id="ss-tag">PUNCHED IN</div>
+  <div class="ss-name"    id="ss-name"></div>
+  <div class="ss-time"    id="ss-time"></div>
+  <div class="ss-hours"   id="ss-hours"></div>
+  <div class="ss-conf"    id="ss-conf"></div>
+  <button class="ss-back" onclick="closeSS()">← Next Person</button>
 </div>
 
 <script>
-  // ▼▼▼ PASTE YOUR APPS SCRIPT URL HERE ▼▼▼
+  // ▼▼▼ YOUR APPS SCRIPT URL ▼▼▼
   const GAS_URL = 'https://script.google.com/macros/s/AKfycbwMfjN5xufbzwzAmrJhFJ-3ctcTQWA0rh7LMO6aTnXkWq5i7Vrp-Kj-UikqkpxweDM/exec';
-  // ▲▲▲ https://script.google.com/macros/s/.../exec ▲▲▲
 
-  let faceMatcher  = null;
-  let isReady      = false;
-  let userLocation = null;
+  // ── TUNING ────────────────────────────────
+  const THRESHOLD     = 0.38;  // Raise to 0.42 if staff are rejected too often
+  const DETECT_FRAMES = 5;
+  const REG_FRAMES    = 5;
+  const FRAME_GAP_MS  = 100;
+  const INPUT_SIZE    = 160;   // 128=faster, 224=more accurate
+  const CACHE_KEY     = 'ghk-models-v3';
+  const MODEL_URL     = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/';
+  // ─────────────────────────────────────────
 
-  const video = document.getElementById('video');
+  var faceapi     = null;
+  var faceMatcher = null;
+  var isReady     = false;
+  var userLoc     = null;
+  const video     = document.getElementById('video');
 
-  /* Clock */
+  // Clock (Space Mono, 12hr)
   function tickClock() {
-    document.getElementById('clock').textContent =
-      new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', hour12:true});
+    var t = new Date();
+    var h = t.getHours() % 12 || 12;
+    var m = String(t.getMinutes()).padStart(2,'0');
+    var a = t.getHours() >= 12 ? 'PM' : 'AM';
+    document.getElementById('clock').textContent = h + ':' + m + ' ' + a;
   }
-  tickClock(); setInterval(tickClock, 10000);
+  tickClock(); setInterval(tickClock, 15000);
 
-  /* GPS */
-  if (navigator.geolocation) {
+  // GPS
+  if (navigator.geolocation)
     navigator.geolocation.getCurrentPosition(
-      function(p) { userLocation = {lat:p.coords.latitude, lng:p.coords.longitude}; },
-      function() {}, {timeout:8000}
+      function(p){ userLoc = {lat:p.coords.latitude, lng:p.coords.longitude}; },
+      function(){}, {timeout:8000}
     );
+
+  // ── 1. START CAMERA IMMEDIATELY ───────────
+  navigator.mediaDevices.getUserMedia({
+    video: { facingMode:'user', width:{ideal:320}, height:{ideal:240} }, audio:false
+  }).then(function(stream){
+    video.srcObject = stream; video.play();
+    setStatus('Camera ready — loading AI…', 'amber');
+    loadFaceApiScript();
+  }).catch(function(err){
+    setStatus('Camera error: ' + err.message, 'red');
+    setBtn('btn-punch', false, '❌ Camera unavailable');
+  });
+
+  // ── 2. LOAD face-api.js DYNAMICALLY ───────
+  function loadFaceApiScript() {
+    var s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.js';
+    s.onload  = function(){ faceapi = window.faceapi; loadModels(); };
+    s.onerror = function(){ setStatus('AI script load failed — check internet', 'red'); };
+    document.head.appendChild(s);
   }
 
-  /* ── STARTUP ── */
-  window.addEventListener('load', async function() {
+  // ── 3. LOAD MODELS WITH BROWSER CACHE ─────
+  async function loadModels() {
     try {
-      prog('Loading AI models… (1/3)', 20);
-      const M = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/';
-      await Promise.all([
-        faceapi.nets.tinyFaceDetector.loadFromUri(M),
-        faceapi.nets.faceLandmark68TinyNet.loadFromUri(M),
-        faceapi.nets.faceRecognitionNet.loadFromUri(M)
-      ]);
-      prog('Starting camera… (2/3)', 55);
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video:{facingMode:'user', width:{ideal:320}, height:{ideal:240}}, audio:false
-      });
-      video.srcObject = stream;
-      await video.play();
-      prog('Loading staff database… (3/3)', 82);
+      var cache = null;
+      try { cache = await caches.open(CACHE_KEY); } catch(e){}
+      if (cache) {
+        var origFetch = window.fetch;
+        window.fetch = async function(url, opts) {
+          if (typeof url === 'string' && url.indexOf('face-api') > -1) {
+            try {
+              var hit = await cache.match(url);
+              if (hit) return hit;
+              var resp = await origFetch(url, opts);
+              if (resp && resp.ok) { try { await cache.put(url, resp.clone()); } catch(e){} }
+              return resp;
+            } catch(e){ return origFetch(url, opts); }
+          }
+          return origFetch(url, opts);
+        };
+      }
+prog('Loading AI models in parallel…', 20);
+ await Promise.all([
+      faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+       faceapi.nets.faceLandmark68TinyNet.loadFromUri(MODEL_URL),
+       faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
+     ]);
+     prog('Models ready — loading staff…', 85);
       await loadDatabase();
-      document.getElementById('ld-fill').style.width = '100%';
-      setTimeout(function() {
-        document.getElementById('ld-overlay').style.display = 'none';
-        document.getElementById('oval').style.display = 'block';
-      }, 400);
+      document.getElementById('load-banner').style.display = 'none';
     } catch(err) {
-      document.getElementById('ld-text').innerHTML =
-        '❌ ' + err.message + '<br><br>Allow camera in browser settings, then reload.';
-      document.getElementById('ld-fill').style.background = '#f87171';
+      setStatus('❌ ' + err. message, 'red');
+      document.getElementById('load-txt').textContent = '❌ ' + err.message;
     }
-  });
+  }
 
   function prog(msg, pct) {
-    document.getElementById('ld-text').innerHTML = msg;
-    document.getElementById('ld-fill').style.width = pct + '%';
+    document.getElementById('load-txt').textContent = msg;
+    document.getElementById('load-pct').textContent = pct + '%';
+    document.getElementById('load-fill').style.width = pct + '%';
   }
 
-  /* ── LOAD STAFF DATABASE ── */
+  // ── LOAD STAFF DB ──────────────────────────
   async function loadDatabase() {
-    const res = await api('getUsers', {});
+    var res = await api('getUsers', {});
     if (res.error) throw new Error(res.error);
-    if (!res.users || res.users.length === 0) {
-      setStatus('No staff yet — tap Add New Staff', 'amber');
-      showPanel('attend'); return;
+    if (!res.users || !res.users.length) {
+      setStatus('No staff registered yet', 'amber');
+      setBtn('btn-punch', true, '⚠️  No Staff Registered');
+      return;
     }
-    const descriptors = res.users.map(function(u) {
-      return new faceapi.LabeledFaceDescriptors(
-        u.label, [new Float32Array(JSON.parse(u.descriptor))]
-      );
+    var descs = res.users.map(function(u){
+      return new faceapi.LabeledFaceDescriptors(u.label, [new Float32Array(JSON.parse(u.descriptor))]);
     });
-    faceMatcher = new faceapi.FaceMatcher(descriptors, 0.5);
+    faceMatcher = new faceapi.FaceMatcher(descs, THRESHOLD);
     isReady = true;
-    setStatus(res.users.length + ' staff loaded — ready!', 'green');
-    showPanel('attend');
+    setStatus(res.users.length + ' staff loaded · System ready', 'green');
+    setBtn('btn-punch', false, '✅&nbsp; Mark Attendance');
+    document.getElementById('btn-punch').querySelector('span').innerHTML = '✅&nbsp;&nbsp;Mark Attendance';
   }
 
-  /* ── MARK ATTENDANCE (IN / OUT) ── */
-  document.getElementById('btn-punch').addEventListener('click', async function() {
-    if (!isReady) { showAlert('alert-attend', 'Still loading — please wait.', 'info'); return; }
-    setBtn('btn-punch', true, '🔍 Scanning face…');
+  // ── MULTI-FRAME DETECTION ──────────────────
+  async function detectAvg(frames) {
+    var opts = new faceapi.TinyFaceDetectorOptions({inputSize: INPUT_SIZE, scoreThreshold: 0.45});
+    var descs = [];
+    for (var i = 0; i < frames; i++) {
+      try {
+        var det = await faceapi.detectSingleFace(video, opts).withFaceLandmarks(true).withFaceDescriptor();
+        if (det) descs.push(det.descriptor);
+        updateScanLabel(i + 1, frames);
+      } catch(e){}
+      if (i < frames-1) await sleep(FRAME_GAP_MS);
+    }
+    if (descs.length < Math.ceil(frames * 0.6)) return null;
+    var avg = new Float32Array(128);
+    for (var j = 0; j < descs.length; j++) for (var k = 0; k < 128; k++) avg[k] += descs[j][k];
+    for (var k = 0; k < 128; k++) avg[k] /= descs.length;
+    return { descriptor: avg, count: descs.length };
+  }
 
-    const det = await detect();
-    if (!det) {
-      setBtn('btn-punch', false, getCurrentPunchLabel());
-      showAlert('alert-attend', '❌ No face detected. Move closer, ensure good lighting.', 'error');
+  function updateScanLabel(frame, total) {
+    document.getElementById('scan-label').textContent = 'FRAME ' + frame + '/' + total;
+  }
+
+  function sleep(ms){ return new Promise(function(r){ setTimeout(r, ms); }); }
+
+  // ── MARK ATTENDANCE ────────────────────────
+  document.getElementById('btn-punch').addEventListener('click', async function(){
+    if (!isReady){ showAlert('alert-attend','⏳ System still loading — please wait.','info'); return; }
+    setBtn('btn-punch', true, '🔍&nbsp; Scanning…');
+    setScan(true);
+
+    var result = await detectAvg(DETECT_FRAMES);
+    setScan(false);
+
+    if (!result){
+      setBtn('btn-punch', false, '✅&nbsp; Mark Attendance');
+      showAlert('alert-attend','❌ No face detected. Centre your face in the oval and hold still.','error');
       return;
     }
-
-    const match = faceMatcher.findBestMatch(det.descriptor);
-    if (match.label === 'unknown') {
-      setBtn('btn-punch', false, getCurrentPunchLabel());
-      showAlert('alert-attend', '❌ Face not recognised. Are you registered?', 'error');
+    var match = faceMatcher.findBestMatch(result.descriptor);
+    if (match.label === 'unknown'){
+      setBtn('btn-punch', false, '✅&nbsp; Mark Attendance');
+      showAlert('alert-attend','❌ Face not recognised. Ensure good lighting or re-register.','error');
       return;
     }
-
-    showAlert('alert-attend', '⏳ Saving attendance for ' + match.label + '…', 'info');
-    const res = await api('recordAttendance', {name: match.label, gps: userLocation});
-    setBtn('btn-punch', false, getCurrentPunchLabel());
-
-    if (res.error) { showAlert('alert-attend', '⚠️ ' + res.error, 'warning'); return; }
-
-    // Show big success screen
-    showSuccess(res.type, res.name, res.time, res.date, res.workingHours);
+    showAlert('alert-attend','⏳ Saving attendance for ' + match.label + '…','info');
+    var res = await api('recordAttendance', {name: match.label, gps: userLoc});
+    setBtn('btn-punch', false, '✅&nbsp; Mark Attendance');
+    if (res.error){ showAlert('alert-attend','⚠️ ' + res.error,'warning'); return; }
+    var conf = Math.round(Math.max(0,(1 - match.distance / THRESHOLD)) * 100);
+    showSS(res.type, res.name, res.time, res.date, res.workingHours, conf, result.count);
   });
 
-  /* ── ADD NEW STAFF ── */
-  document.getElementById('btn-new-user').addEventListener('click', function() {
-    showPanel('register');
-    document.getElementById('reg-name').focus();
-  });
-  document.getElementById('btn-cancel').addEventListener('click', function() {
-    document.getElementById('reg-name').value = '';
-    showPanel('attend');
-  });
-  document.getElementById('btn-save').addEventListener('click', async function() {
-    const name = document.getElementById('reg-name').value.trim();
-    if (!name) { showAlert('alert-reg', '⚠️ Please enter staff name first.', 'error'); return; }
-    setBtn('btn-save', true, '📸 Scanning face…');
-    const det = await detect();
-    if (!det) {
+  // ── REGISTER ──────────────────────────────
+  document.getElementById('btn-save').addEventListener('click', async function(){
+    var name = document.getElementById('reg-name').value.trim();
+    if (!name){ showAlert('alert-reg','⚠️ Enter staff name first.','error'); return; }
+    if (!faceapi){ showAlert('alert-reg','⏳ AI still loading — please wait.','info'); return; }
+    setBtn('btn-save', true, '📸 Scanning ' + REG_FRAMES + ' frames…');
+    showAlert('alert-reg','⏳ Hold still — capturing face samples…','info');
+    setScan(true);
+    var result = await detectAvg(REG_FRAMES);
+    setScan(false);
+    if (!result){
       setBtn('btn-save', false, '📸  Scan & Save Face');
-      showAlert('alert-reg', '❌ No face detected. Centre your face in the oval.', 'error'); return;
+      showAlert('alert-reg','❌ Face not detected clearly. Ensure good lighting.','error'); return;
     }
-    showAlert('alert-reg', '⏳ Saving to Google Sheet…', 'info');
-    const res = await api('registerUser', {name:name, descriptor:JSON.stringify(Array.from(det.descriptor))});
+    showAlert('alert-reg','⏳ Saving to database…','info');
+    var res = await api('registerUser', {name: name, descriptor: JSON.stringify(Array.from(result.descriptor))});
     setBtn('btn-save', false, '📸  Scan & Save Face');
-    if (res.success) {
+    if (res.success){
       document.getElementById('reg-name').value = '';
-      showPanel('attend');
-      await loadDatabase();
-      showSuccess('register', name, '', '', '');
+      goHome(); await loadDatabase();
+      showSS('register', name, '', '', '', null, result.count);
     } else {
-      showAlert('alert-reg', '⚠️ ' + res.message, 'error');
+      showAlert('alert-reg','⚠️ ' + (res.message||'Unknown error'),'error');
     }
   });
+  document.getElementById('btn-cancel').addEventListener('click', goHome);
 
-  /* ── TODAY'S REPORT ── */
-  document.getElementById('btn-report').addEventListener('click', async function() {
-    document.getElementById('report-section').style.display = 'block';
-    document.getElementById('rpt-count').textContent = '…';
-    document.getElementById('rpt-list').innerHTML = '<p style="font-size:0.82rem;color:#888;padding:6px 0">Loading…</p>';
-    const res = await api('getDailyReport', {});
-    document.getElementById('rpt-count').textContent = res.count || 0;
-    if (!res.staff || res.staff.length === 0) {
-      document.getElementById('rpt-list').innerHTML =
-        '<p style="font-size:0.82rem;color:#888;text-align:center;padding:8px">No attendance today yet.</p>'; return;
-    }
-    var html = '';
-    res.staff.forEach(function(s, i) {
-      var inBadge  = s.inTime  ? '<span class="badge-in">IN '  + s.inTime  + '</span>' : '<span style="color:#aaa;font-size:0.75rem">No IN</span>';
-      var outBadge = s.outTime ? '<span class="badge-out">OUT ' + s.outTime + '</span>' : '<span style="color:#aaa;font-size:0.75rem">Still in</span>';
-      var hours    = s.workingHours ? '<span class="rhours">⏱ ' + s.workingHours + '</span>' : '';
-      var map      = s.mapLink ? ' <a href="'+s.mapLink+'" target="_blank">📍</a>' : '';
-      html += '<div class="rrow">' +
-        '<div><span class="rname">' + (i+1) + '.  ' + s.name + map + '</span><br>' +
-        '<span class="rtimes">' + inBadge + '  ' + outBadge + '</span></div>' +
-        '<div>' + hours + '</div></div>';
-    });
-    document.getElementById('rpt-list').innerHTML = html;
-  });
-  document.getElementById('btn-close-rpt').addEventListener('click', function() {
+  // ── REPORT ────────────────────────────────
+  document.getElementById('btn-close-rpt').addEventListener('click', function(){
     document.getElementById('report-section').style.display = 'none';
   });
 
-  /* ── SUCCESS SCREEN ── */
-  function showSuccess(type, name, time, date, hours) {
-    var isReg = type === 'register';
-    var isIN  = type === 'IN';
-    var isOUT = type === 'OUT';
-
-    var circle = document.getElementById('ss-circle');
-    var badge  = document.getElementById('ss-badge');
-    var hoursEl= document.getElementById('ss-hours');
-
-    circle.textContent = isReg ? '🎉' : (isIN ? '🟢' : '🔴');
-    circle.className   = 'ss-circle ' + (isReg ? 'reg-circle' : (isIN ? 'in-circle' : 'out-circle'));
-
-    badge.textContent  = isReg ? 'REGISTERED' : (isIN ? 'PUNCHED IN' : 'PUNCHED OUT');
-    badge.className    = 'ss-badge ' + (isReg ? 'reg' : (isIN ? 'in' : 'out'));
-
-    document.getElementById('ss-name').textContent = name;
-    document.getElementById('ss-time').textContent = isReg ? 'Face saved to Google Sheet' : ('🕐 ' + time + '   📅 ' + date);
-
-    if (isOUT && hours) {
-      hoursEl.textContent = '⏱  Total working hours: ' + hours;
-      hoursEl.style.display = 'block';
-    } else {
-      hoursEl.style.display = 'none';
-    }
-
-    // Update punch button for next person
-    updatePunchButton(null);
-
-    document.getElementById('success-screen').classList.add('show');
-  }
-
-  function closeSuccess() {
-    document.getElementById('success-screen').classList.remove('show');
-  }
-
-  /* ── PUNCH BUTTON STATE ──
-     After a successful punch we don't know who's next
-     so we keep button neutral. The button only changes
-     color AFTER face is detected and matched.
-  ── */
-  function getCurrentPunchLabel() {
-    return '✅  Mark Attendance';
-  }
-
-  function updatePunchButton(type) {
-    var btn  = document.getElementById('btn-punch');
-    var hint = document.getElementById('punch-hint-text');
-    // Reset to neutral — we don't know next person's state
-    btn.classList.remove('out-mode');
-    btn.textContent = '✅  Mark Attendance';
-    hint.textContent = '👆 Face the camera and tap';
-  }
-
-  /* ── HELPERS ── */
-  async function detect() {
+  async function loadReport(){
+    document.getElementById('report-section').style.display = 'block';
+    document.getElementById('rpt-count').textContent = '…';
+    document.getElementById('rpt-list').innerHTML = '<p style="font-size:0.75rem;color:var(--text2);padding:8px 0;font-family:Space Mono,monospace;">Loading…</p>';
     try {
-      const opts = new faceapi.TinyFaceDetectorOptions({inputSize:224, scoreThreshold:0.4});
-      return await faceapi.detectSingleFace(video, opts).withFaceLandmarks(true).withFaceDescriptor();
-    } catch(e) { return null; }
+      var res = await api('getDailyReport', {});
+      document.getElementById('rpt-count').textContent = res.count || 0;
+      if (!res.staff || !res.staff.length){
+        document.getElementById('rpt-list').innerHTML = '<p style="font-size:0.75rem;color:var(--text2);text-align:center;padding:12px;font-family:Space Mono,monospace;">No attendance recorded today.</p>';
+        return;
+      }
+      var html = '';
+      res.staff.forEach(function(s, i){
+        var inB  = s.inTime  ? '<span class="tbadge in">▶ ' + s.inTime  + '</span>' : '<span class="tbadge none">—</span>';
+        var outB = s.outTime ? '<span class="tbadge out">■ ' + s.outTime + '</span>' : '<span class="tbadge none">still in</span>';
+        var hrs  = s.workingHours ? '<span class="rhours">⏱ ' + s.workingHours + '</span>' : '';
+        var map  = s.mapLink ? ' <a href="'+s.mapLink+'" target="_blank" style="color:var(--blue);text-decoration:none;font-size:0.8rem;">📍</a>' : '';
+        html += '<div class="rrow"><div class="rrow-left"><div class="rname">' + (i+1) + '. ' + s.name + map + '</div><div class="rtimes">' + inB + outB + '</div></div>' + hrs + '</div>';
+      });
+      document.getElementById('rpt-list').innerHTML = html;
+      document.getElementById('report-section').scrollIntoView({behavior:'smooth'});
+    } catch(e){
+      document.getElementById('rpt-list').innerHTML = '<p style="color:var(--red);font-size:0.75rem;">Error loading report.</p>';
+    }
   }
 
-  async function api(action, payload) {
-    const res = await fetch(GAS_URL + '?action=' + action, {
-      method:'POST', mode:'cors',
-      headers:{'Content-Type':'text/plain'},
-      body:JSON.stringify(payload)
+  // ── NAVIGATION ────────────────────────────
+  function setNavActive(id){
+    ['nav-home','nav-add','nav-report'].forEach(function(n){
+      document.getElementById(n).classList.toggle('active', n === id);
     });
-    return res.json();
+  }
+  function goHome(){
+    showPanel('attend');
+    document.getElementById('report-section').style.display = 'none';
+    setNavActive('nav-home');
+  }
+  function goAdd(){
+    if (!faceapi){ alert('AI models still loading. Please wait a moment.'); return; }
+    showPanel('register');
+    setNavActive('nav-add');
+    setTimeout(function(){ document.getElementById('reg-name').focus(); }, 100);
+  }
+  function goReport(){
+    showPanel('attend');
+    setNavActive('nav-report');
+    loadReport();
   }
 
-  function setStatus(msg, color) {
-    document.getElementById('stext').textContent = msg;
-    document.getElementById('sdot').className = 'dot ' + color;
+  // ── SUCCESS SCREEN ─────────────────────────
+  function showSS(type, name, time, date, hours, conf, frames){
+    var isReg = type==='register', isIN = type==='IN', isOUT = type==='OUT';
+    var cls = isReg ? 'reg' : (isIN ? 'in' : 'out');
+    document.getElementById('ss-ring').textContent = isReg ? '🎉' : (isIN ? '✅' : '🔴');
+    document.getElementById('ss-ring').className = 'ss-ring ' + cls;
+    document.getElementById('ss-tag').textContent = isReg ? 'REGISTERED' : (isIN ? 'PUNCHED IN' : 'PUNCHED OUT');
+    document.getElementById('ss-tag').className = 'ss-tag ' + cls;
+    document.getElementById('ss-name').textContent = name;
+    document.getElementById('ss-time').textContent = isReg ? 'Face saved to database' : ('🕐 ' + time + '  ·  📅 ' + date);
+    var hoursEl = document.getElementById('ss-hours');
+    if (isOUT && hours){ hoursEl.textContent = '⏱ ' + hours + ' worked today'; hoursEl.style.display = 'block'; }
+    else { hoursEl.style.display = 'none'; }
+    var confEl = document.getElementById('ss-conf');
+    confEl.textContent = conf !== null && conf !== undefined
+      ? 'CONFIDENCE: ' + conf + '%  ·  FRAMES: ' + frames
+      : 'REGISTERED WITH ' + frames + ' FACE SAMPLES';
+    document.getElementById('ss').classList.add('show');
   }
-  function showPanel(name) {
+  function closeSS(){ document.getElementById('ss').classList.remove('show'); }
+
+  // ── HELPERS ───────────────────────────────
+  function setScan(on){
+    document.getElementById('scan-bar').style.display   = on ? 'block' : 'none';
+    document.getElementById('scan-label').style.display = on ? 'block' : 'none';
+    document.getElementById('reticle').classList.toggle('scanning', on);
+    if (!on) document.getElementById('scan-label').textContent = 'Scanning…';
+  }
+  function showPanel(name){
     document.getElementById('panel-attend').classList.toggle('hidden',   name !== 'attend');
     document.getElementById('panel-register').classList.toggle('hidden', name !== 'register');
   }
-  function setBtn(id, disabled, label) {
-    var b = document.getElementById(id);
-    b.disabled = disabled; b.textContent = label;
+  function setStatus(msg, color){
+    document.getElementById('stext').textContent = msg;
+    document.getElementById('sdot').className = 'sdot ' + color;
   }
-  function showAlert(id, msg, type) {
+  function setBtn(id, disabled, html){
+    var b = document.getElementById(id);
+    b.disabled = disabled;
+    if (b.querySelector('span')) b.querySelector('span').innerHTML = html;
+    else b.innerHTML = '<span>' + html + '</span>';
+  }
+  function showAlert(id, msg, type){
     var el = document.getElementById(id);
-    el.textContent = msg;
-    el.className = 'alert ' + type + ' show';
-    if (type !== 'info') setTimeout(function() { el.classList.remove('show'); }, 4500);
+    el.textContent = msg; el.className = 'alert ' + type + ' show';
+    if (type !== 'info') setTimeout(function(){ el.classList.remove('show'); }, 5000);
+  }
+  async function api(action, payload){
+    var res = await fetch(GAS_URL + '?action=' + action, {
+      method:'POST', mode:'cors', headers:{'Content-Type':'text/plain'},
+      body: JSON.stringify(payload)
+    });
+    return res.json();
   }
 </script>
 </body>
