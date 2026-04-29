@@ -4,286 +4,278 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <title>GHK Lab Attendance</title>
+  <meta name="apple-mobile-web-app-title" content="GHK Attend">
+  <meta name="mobile-web-app-capable" content="yes">
+  <title>GHK Attendance</title>
   <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
     :root {
-      --black: #1a1a1a; --white: #fff; --grey: #f0f2f5;
-      --green: #155724; --green-bg: #d4edda; --green-btn: #1a7a3f;
-      --red: #721c24;   --red-bg: #f8d7da;   --red-btn: #c0392b;
-      --blue: #0c5460;  --blue-bg: #d1ecf1;
-      --amber: #856404; --amber-bg: #fff3cd;
-      --muted: #666;    --radius: 10px;
+      --black:#1a1a1a; --white:#fff; --grey:#f0f2f5;
+      --green:#155724; --green-bg:#d4edda; --green-btn:#1a7a3f;
+      --red:#721c24;   --red-bg:#f8d7da;   --red-btn:#c0392b;
+      --blue:#0c5460;  --blue-bg:#d1ecf1;
+      --amber:#856404; --amber-bg:#fff3cd;
+      --muted:#666;    --radius:10px;
     }
-    html, body { height: 100%; background: var(--grey); font-family: 'Segoe UI', sans-serif; }
+    html,body { min-height:100%; background:var(--grey); font-family:'Segoe UI',sans-serif; -webkit-font-smoothing:antialiased; }
+    .app { min-height:100vh; display:flex; flex-direction:column; align-items:center; padding:16px 14px 80px; }
 
-    .app { display: flex; flex-direction: column; align-items: center; min-height: 100vh; padding: 12px 12px 80px; }
+    /* Header */
+    .header { width:100%; max-width:400px; display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+    .logo { font-size:1.05rem; font-weight:700; }
+    .logo span { color:#c00; }
+    .clock { font-size:1rem; font-weight:600; color:var(--muted); letter-spacing:1px; }
 
-    .header { width: 100%; max-width: 400px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-    .logo { font-size: 1rem; font-weight: 700; }
-    .logo span { color: #c00; }
-    .clock { font-size: 0.95rem; font-weight: 600; color: var(--muted); letter-spacing: 1px; }
+    /* Card */
+    .card { width:100%; max-width:400px; background:var(--white); border:2px solid var(--black); border-radius:14px; overflow:hidden; box-shadow:4px 4px 0 var(--black); }
 
-    .card { width: 100%; max-width: 400px; background: var(--white); border: 2px solid var(--black); border-radius: 14px; overflow: hidden; box-shadow: 4px 4px 0 var(--black); }
+    /* Camera */
+    .cam-wrap { position:relative; width:100%; height:0; padding-bottom:72%; background:#000; overflow:hidden; }
+    video { position:absolute; top:0; left:0; width:100%; height:100%; object-fit:cover; transform:scaleX(-1); }
+    .face-oval { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:140px; height:180px; border:2.5px dashed rgba(255,255,255,0.85); border-radius:50%; pointer-events:none; box-shadow:0 0 0 1000px rgba(0,0,0,0.38); display:none; }
 
-    .cam-wrap { position: relative; width: 100%; padding-bottom: 70%; background: #111; overflow: hidden; }
-    video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
+    /* Loading overlay */
+    #ld-overlay { position:absolute; inset:0; background:rgba(0,0,0,0.85); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; padding:20px; text-align:center; z-index:10; }
+    #ld-text { color:#fff; font-size:0.88rem; font-weight:600; line-height:1.6; }
+    #ld-bar  { width:80%; height:6px; background:rgba(255,255,255,0.2); border-radius:10px; overflow:hidden; }
+    #ld-fill { height:100%; width:0%; background:#fff; border-radius:10px; transition:width 0.5s ease; }
 
-    .oval { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -55%); width: 130px; height: 170px; border: 2.5px dashed rgba(255,255,255,0.8); border-radius: 50%; pointer-events: none; box-shadow: 0 0 0 2000px rgba(0,0,0,0.35); }
+    /* Status bar */
+    .sbar { display:flex; align-items:center; gap:8px; padding:11px 16px; border-bottom:1px solid #eee; font-size:0.84rem; font-weight:600; }
+    .dot { width:9px; height:9px; border-radius:50%; flex-shrink:0; }
+    .dot.green { background:#28a745; }
+    .dot.amber { background:#ffc107; animation:blink 1s infinite; }
+    .dot.red   { background:#dc3545; }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
 
-    .scan-bar { position: absolute; left: 50%; transform: translateX(-50%); width: 130px; height: 3px; background: rgba(40,200,100,0.85); border-radius: 2px; display: none; top: 50%; margin-top: -82px; animation: sweep2 1.1s ease-in-out infinite; }
-    @keyframes sweep2 { 0%,100%{ margin-top: -82px; } 50%{ margin-top: 50px; } }
+    /* Punch button */
+    .panel { padding:16px 18px 22px; }
+    .btn-punch {
+      display:block; width:100%; padding:16px;
+      border:2px solid var(--black); border-radius:var(--radius);
+      font-size:1.05rem; font-weight:700; cursor:pointer; text-align:center;
+      margin-bottom:10px; transition:all 0.25s; color:#fff;
+      -webkit-tap-highlight-color:transparent;
+      background:var(--green-btn); border-color:var(--green-btn);
+    }
+    .btn-punch.out-mode { background:var(--red-btn); border-color:var(--red-btn); }
+    .btn-punch:disabled { background:#aaa; border-color:#aaa; cursor:not-allowed; }
+    .btn-punch:active:not(:disabled) { transform:scale(0.97); }
 
-    /* ── WARMUP PULSE — subtle green glow on oval when warming up ── */
-    .warmup-ring { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -55%); width: 134px; height: 174px; border-radius: 50%; pointer-events: none; display: none; animation: warmPulse 1.2s ease-in-out infinite; }
-    @keyframes warmPulse { 0%,100%{ box-shadow: 0 0 0 0 rgba(74,222,128,0); } 50%{ box-shadow: 0 0 16px 4px rgba(74,222,128,0.55); } }
+    /* Punch hint pill */
+    .punch-hint { text-align:center; font-size:0.75rem; font-weight:600; color:var(--muted); margin-bottom:14px; letter-spacing:0.3px; }
+    .punch-hint span { display:inline-block; padding:3px 10px; border-radius:20px; background:#f0f0f0; }
 
-    .load-banner { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.82); padding: 10px 16px; }
-    .load-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
-    .load-txt { color: #fff; font-size: 0.78rem; font-weight: 600; }
-    .load-pct { color: rgba(255,255,255,0.7); font-size: 0.72rem; }
-    .load-track { height: 5px; background: rgba(255,255,255,0.2); border-radius: 3px; overflow: hidden; }
-    .load-fill { height: 100%; background: #4ade80; border-radius: 3px; width: 0%; transition: width 0.5s ease; }
+    .btn {
+      display:block; width:100%; padding:13px;
+      border:2px solid var(--black); border-radius:var(--radius);
+      font-size:0.95rem; font-weight:700; cursor:pointer;
+      background:var(--white); color:var(--black);
+      margin-bottom:10px; text-align:center;
+      -webkit-tap-highlight-color:transparent; transition:transform 0.1s;
+    }
+    .btn:last-child { margin-bottom:0; }
+    .btn:active:not(:disabled) { transform:scale(0.97); }
+    .btn:disabled { background:#e9ecef; border-color:#aaa; color:#aaa; cursor:not-allowed; }
+    .btn.primary { background:var(--black); color:var(--white); }
 
-    .sbar { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-bottom: 1px solid #eee; font-size: 0.82rem; font-weight: 600; }
-    .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-    .dot.green { background: #28a745; }
-    .dot.amber { background: #ffc107; animation: blink 1s infinite; }
-    .dot.red   { background: #dc3545; }
-    @keyframes blink { 0%,100%{ opacity:1 } 50%{ opacity:0.3 } }
+    .flabel { display:block; font-size:0.72rem; font-weight:700; text-transform:uppercase; letter-spacing:0.8px; color:var(--muted); margin-bottom:5px; }
+    .finput { width:100%; padding:12px 13px; border:2px solid #ccc; border-radius:var(--radius); font-size:0.95rem; outline:none; margin-bottom:12px; }
+    .finput:focus { border-color:var(--black); }
 
-    .panel { padding: 14px 16px 18px; }
-    .hidden { display: none !important; }
+    .alert { padding:11px 13px; border-radius:8px; font-size:0.85rem; font-weight:600; margin-top:12px; line-height:1.5; display:none; }
+    .alert.show    { display:block; }
+    .alert.success { background:var(--green-bg); color:var(--green); border:1px solid #c3e6cb; }
+    .alert.error   { background:var(--red-bg);   color:var(--red);   border:1px solid #f5c6cb; }
+    .alert.info    { background:var(--blue-bg);  color:var(--blue);  border:1px solid #bee5eb; }
+    .alert.warning { background:var(--amber-bg); color:var(--amber); border:1px solid #ffeeba; }
 
-    .btn-punch { display: block; width: 100%; padding: 16px; border: none; border-radius: var(--radius); font-size: 1.05rem; font-weight: 700; cursor: pointer; color: #fff; background: var(--green-btn); margin-bottom: 0; transition: transform 0.1s, opacity 0.2s; -webkit-tap-highlight-color: transparent; }
-    .btn-punch:disabled { opacity: 0.55; cursor: not-allowed; }
-    .btn-punch:active:not(:disabled) { transform: scale(0.97); }
+    /* Report */
+    #report-section { display:none; width:100%; max-width:400px; margin-top:14px; }
+    .rcard { background:var(--white); border:2px solid var(--black); border-radius:12px; padding:16px; box-shadow:3px 3px 0 var(--black); }
+    .rcard h3 { font-size:0.95rem; font-weight:700; margin-bottom:10px; }
+    .rbig { font-size:2.5rem; font-weight:800; text-align:center; }
+    .rsub { font-size:0.75rem; color:var(--muted); text-align:center; margin-bottom:12px; }
+    .rrow { display:grid; grid-template-columns:1fr auto auto; gap:8px; align-items:center; padding:7px 0; border-bottom:1px solid #eee; font-size:0.82rem; }
+    .rrow:last-child { border-bottom:none; }
+    .rrow .rname { font-weight:600; }
+    .rrow .rtimes { color:var(--muted); font-size:0.78rem; }
+    .rrow .rhours { font-size:0.75rem; font-weight:700; padding:2px 7px; border-radius:20px; background:#e8f5e9; color:var(--green); white-space:nowrap; }
+    .badge-in  { display:inline-block; padding:2px 8px; border-radius:20px; font-size:0.72rem; font-weight:700; background:#d4edda; color:var(--green); }
+    .badge-out { display:inline-block; padding:2px 8px; border-radius:20px; font-size:0.72rem; font-weight:700; background:#f8d7da; color:var(--red); }
 
-    .btn { display: block; width: 100%; padding: 13px; border: 2px solid var(--black); border-radius: var(--radius); font-size: 0.92rem; font-weight: 700; cursor: pointer; background: var(--white); color: var(--black); text-align: center; -webkit-tap-highlight-color: transparent; transition: transform 0.1s; }
-    .btn:active { transform: scale(0.97); }
-    .btn.primary { background: var(--black); color: var(--white); border-color: var(--black); }
-    .btn.danger  { background: var(--red-btn); color: #fff; border-color: var(--red-btn); }
+    /* Success screen */
+    #success-screen { display:none; position:fixed; inset:0; background:#fff; z-index:200; flex-direction:column; align-items:center; justify-content:center; padding:32px 24px; text-align:center; }
+    #success-screen.show { display:flex; }
+    .ss-circle { width:130px; height:130px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:3.5rem; margin-bottom:20px; animation:pop 0.45s cubic-bezier(0.34,1.56,0.64,1); border:3px solid var(--black); }
+    .ss-circle.in-circle  { background:#d4edda; border-color:var(--green-btn); }
+    .ss-circle.out-circle { background:#f8d7da; border-color:var(--red-btn); }
+    .ss-circle.reg-circle { background:#d1ecf1; border-color:#0c5460; }
+    .ss-badge { display:inline-block; padding:4px 14px; border-radius:20px; font-size:0.78rem; font-weight:800; letter-spacing:1px; text-transform:uppercase; margin-bottom:12px; }
+    .ss-badge.in  { background:#d4edda; color:var(--green); }
+    .ss-badge.out { background:#f8d7da; color:var(--red); }
+    .ss-badge.reg { background:#d1ecf1; color:var(--blue); }
+    .ss-name  { font-size:1.4rem; font-weight:800; margin-bottom:6px; color:var(--black); }
+    .ss-time  { font-size:0.9rem; color:var(--muted); margin-bottom:8px; }
+    .ss-hours { font-size:1.1rem; font-weight:700; color:var(--green); margin-bottom:28px; padding:8px 20px; background:#d4edda; border-radius:30px; display:none; }
+    .ss-back  { width:100%; max-width:300px; padding:15px; background:var(--black); color:#fff; border:none; border-radius:var(--radius); font-size:1rem; font-weight:700; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+    @keyframes pop { from{transform:scale(0.3);opacity:0} to{transform:scale(1);opacity:1} }
 
-    .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: var(--white); border-top: 2px solid var(--black); display: flex; z-index: 100; }
-    .nav-btn { flex: 1; padding: 12px 8px; border: none; background: none; font-size: 0.72rem; font-weight: 700; color: var(--black); cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 3px; -webkit-tap-highlight-color: transparent; border-right: 1px solid #eee; }
-    .nav-btn:last-child { border-right: none; }
-    .nav-btn:active { background: #f5f5f5; }
-    .nav-icon { font-size: 1.3rem; }
-
-    .flabel { display: block; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: var(--muted); margin-bottom: 4px; }
-    .finput { width: 100%; padding: 12px 13px; border: 2px solid #ccc; border-radius: var(--radius); font-size: 0.95rem; outline: none; margin-bottom: 10px; }
-    .finput:focus { border-color: var(--black); }
-
-    .alert { padding: 10px 12px; border-radius: 8px; font-size: 0.83rem; font-weight: 600; margin-top: 10px; line-height: 1.5; display: none; }
-    .alert.show    { display: block; }
-    .alert.success { background: var(--green-bg); color: var(--green); }
-    .alert.error   { background: var(--red-bg);   color: var(--red); }
-    .alert.info    { background: var(--blue-bg);  color: var(--blue); }
-    .alert.warning { background: var(--amber-bg); color: var(--amber); }
-
-    #report-section { display: none; width: 100%; max-width: 400px; margin-top: 12px; }
-    .rcard { background: var(--white); border: 2px solid var(--black); border-radius: 12px; padding: 14px; box-shadow: 3px 3px 0 var(--black); }
-    .rcard h3 { font-size: 0.92rem; font-weight: 700; margin-bottom: 8px; }
-    .rbig { font-size: 2.4rem; font-weight: 800; text-align: center; }
-    .rsub { font-size: 0.72rem; color: var(--muted); text-align: center; margin-bottom: 10px; }
-    .rrow { display: flex; justify-content: space-between; align-items: center; padding: 7px 0; border-bottom: 1px solid #eee; font-size: 0.8rem; }
-    .rrow:last-child { border-bottom: none; }
-    .rrow .rname { font-weight: 700; }
-    .rrow .rtimes { color: var(--muted); font-size: 0.74rem; margin-top: 2px; }
-    .rhours { font-size: 0.72rem; font-weight: 700; padding: 2px 7px; border-radius: 20px; background: #e8f5e9; color: var(--green); white-space: nowrap; }
-    .badge-in  { display: inline-block; padding: 1px 7px; border-radius: 20px; font-size: 0.7rem; font-weight: 700; background: #d4edda; color: var(--green); }
-    .badge-out { display: inline-block; padding: 1px 7px; border-radius: 20px; font-size: 0.7rem; font-weight: 700; background: #f8d7da; color: var(--red); }
-
-    #ss { display: none; position: fixed; inset: 0; background: #fff; z-index: 200; flex-direction: column; align-items: center; justify-content: center; padding: 28px 20px; text-align: center; }
-    #ss.show { display: flex; }
-    .ss-icon { font-size: 4rem; margin-bottom: 14px; animation: pop 0.4s cubic-bezier(0.34,1.56,0.64,1); }
-    @keyframes pop { from{ transform:scale(0.2); opacity:0 } to{ transform:scale(1); opacity:1 } }
-    .ss-badge { display: inline-block; padding: 4px 16px; border-radius: 20px; font-size: 0.76rem; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 10px; }
-    .ss-badge.in  { background: #d4edda; color: var(--green); }
-    .ss-badge.out { background: #f8d7da; color: var(--red); }
-    .ss-badge.reg { background: #d1ecf1; color: var(--blue); }
-    .ss-name  { font-size: 1.4rem; font-weight: 800; margin-bottom: 6px; }
-    .ss-time  { font-size: 0.88rem; color: var(--muted); margin-bottom: 6px; }
-    .ss-hours { font-size: 1rem; font-weight: 700; color: var(--green); margin-bottom: 10px; padding: 7px 18px; background: #d4edda; border-radius: 30px; display: none; }
-    .ss-conf  { font-size: 0.75rem; color: var(--muted); margin-bottom: 24px; }
-    .ss-back  { width: 100%; max-width: 280px; padding: 15px; background: var(--black); color: #fff; border: none; border-radius: var(--radius); font-size: 1rem; font-weight: 700; cursor: pointer; }
-
-    /* ── SAVE STATUS on success screen ── */
-    .ss-save-status { font-size: 0.72rem; margin-bottom: 10px; padding: 5px 12px; border-radius: 20px; background: #f0f2f5; color: #888; transition: all 0.4s; }
-    .ss-save-status.saving { background: #fff3cd; color: #856404; }
-    .ss-save-status.saved  { background: #d4edda; color: #155724; }
-    .ss-save-status.failed { background: #f8d7da; color: #721c24; }
-
-    /* ── FAILURE TOAST — floats at top of screen ── */
-    #fail-toast { position: fixed; top: 12px; left: 50%; transform: translateX(-50%) translateY(-80px); z-index: 999; background: #721c24; color: #fff; padding: 10px 18px; border-radius: 30px; font-size: 0.8rem; font-weight: 700; box-shadow: 0 4px 16px rgba(0,0,0,0.25); transition: transform 0.35s cubic-bezier(0.34,1.3,0.64,1); white-space: nowrap; pointer-events: none; }
-    #fail-toast.show { transform: translateX(-50%) translateY(0); }
-
-    .tip { text-align: center; font-size: 0.74rem; color: var(--muted); margin-bottom: 10px; }
+    .hidden { display:none !important; }
   </style>
 </head>
 <body>
-
 <div class="app">
+
   <div class="header">
-    <div class="logo">GHK <span>Lab</span> Attendance</div>
+    <div class="logo">GHK <span></span> Attendance</div>
     <div class="clock" id="clock">--:-- --</div>
   </div>
 
   <div class="card">
     <div class="cam-wrap">
       <video id="video" autoplay muted playsinline webkit-playsinline></video>
-      <div class="oval" id="oval"></div>
-      <div class="warmup-ring" id="warmup-ring"></div>
-      <div class="scan-bar" id="scan-bar"></div>
-
-      <div class="load-banner" id="load-banner">
-        <div class="load-row">
-          <span class="load-txt" id="load-txt">⏳ Loading AI models…</span>
-          <span class="load-pct" id="load-pct">0%</span>
-        </div>
-        <div class="load-track"><div class="load-fill" id="load-fill"></div></div>
+      <div class="face-oval" id="oval"></div>
+      <div id="ld-overlay">
+        <div style="font-size:2.2rem">🧠</div>
+        <div id="ld-text">Loading AI models…<br>Please wait</div>
+        <div id="ld-bar"><div id="ld-fill"></div></div>
       </div>
     </div>
 
     <div class="sbar">
       <div class="dot amber" id="sdot"></div>
-      <span id="stext">Starting camera…</span>
+      <span id="stext">Starting up…</span>
     </div>
 
-    <!-- ATTEND PANEL -->
+    <!-- Attendance panel -->
     <div class="panel" id="panel-attend">
-      <div class="tip">👆 Centre your face in the oval and tap the button</div>
-      <button class="btn-punch" id="btn-punch" disabled>⏳ Loading AI…</button>
+      <div class="punch-hint"><span id="punch-hint-text">👆 Face the camera and tap</span></div>
+      <button class="btn-punch" id="btn-punch">✅  Mark Attendance</button>
+      <button class="btn" id="btn-new-user">＋  Add New Staff</button>
+      <button class="btn" id="btn-report">📋  Today's Report</button>
       <div class="alert" id="alert-attend"></div>
     </div>
 
-    <!-- REGISTER PANEL -->
+    <!-- Register panel -->
     <div class="panel hidden" id="panel-register">
       <label class="flabel" for="reg-name">Staff Full Name</label>
       <input type="text" id="reg-name" class="finput" placeholder="e.g. Rahul Sharma" autocomplete="off">
-      <p style="font-size:0.76rem;color:var(--muted);margin-bottom:10px;background:#f8f9fa;padding:8px;border-radius:8px;">
-        📸 Look straight at the camera. We take 5 photos and average them for better accuracy.
-      </p>
-      <button class="btn primary" id="btn-save" style="margin-bottom:8px;">📸  Scan &amp; Save Face</button>
-      <button class="btn" id="btn-cancel">← Back</button>
+      <button class="btn primary" id="btn-save">📸  Scan &amp; Save Face</button>
+      <button class="btn" id="btn-cancel">←  Cancel / Go Back</button>
       <div class="alert" id="alert-reg"></div>
     </div>
   </div>
 
-  <!-- REPORT -->
+  <!-- Report section -->
   <div id="report-section">
     <div class="rcard">
       <h3>📋 Today's Attendance</h3>
-      <div class="rbig" id="rpt-count">—</div>
-      <div class="rsub">Staff present today</div>
+      <div class="rbig" id="rpt-count">…</div>
+      <div class="rsub">Staff Present Today</div>
       <div id="rpt-list"></div>
-      <button class="btn" id="btn-close-rpt" style="margin-top:10px;">✕ Close</button>
+      <button class="btn" id="btn-close-rpt" style="margin-top:12px;">Close Report</button>
     </div>
   </div>
+
 </div>
 
-<div class="bottom-nav">
-  <button class="nav-btn" id="nav-home" onclick="goHome()">
-    <span class="nav-icon">🏠</span>Attendance
-  </button>
-  <button class="nav-btn" id="nav-add" onclick="goAdd()">
-    <span class="nav-icon">➕</span>Add Staff
-  </button>
-  <button class="nav-btn" id="nav-report" onclick="goReport()">
-    <span class="nav-icon">📋</span>Report
-  </button>
+<!-- Success screen -->
+<div id="success-screen">
+  <div class="ss-circle" id="ss-circle">✅</div>
+  <div class="ss-badge"  id="ss-badge">IN</div>
+  <div class="ss-name"   id="ss-name"></div>
+  <div class="ss-time"   id="ss-time"></div>
+  <div class="ss-hours"  id="ss-hours"></div>
+  <button class="ss-back" onclick="closeSuccess()">← Next Person</button>
 </div>
-
-<!-- SUCCESS SCREEN -->
-<div id="ss">
-  <div class="ss-icon"  id="ss-icon">✅</div>
-  <div class="ss-badge" id="ss-badge">IN</div>
-  <div class="ss-name"  id="ss-name"></div>
-  <div class="ss-time"  id="ss-time"></div>
-  <div class="ss-hours" id="ss-hours"></div>
-  <div class="ss-save-status" id="ss-save-status">💾 Saving to sheet…</div>
-  <div class="ss-conf"  id="ss-conf"></div>
-  <button class="ss-back" onclick="closeSS()">← Next Person</button>
-</div>
-
-<!-- FAILURE TOAST -->
-<div id="fail-toast">⚠️ Sheet save failed — check internet</div>
 
 <script>
-  // ▼▼▼ PASTE YOUR APPS SCRIPT URL HERE ▼▼▼
-  const GAS_URL = 'https://script.google.com/macros/s/AKfycbwMfjN5xufbzwzAmrJhFJ-3ctcTQWA0rh7LMO6aTnXkWq5i7Vrp-Kj-UikqkpxweDM/exec';
+  // ▼▼▼ GAS URL FROM v3.1 BACKEND ▼▼▼
+  const GAS_URL = 'https://script.google.com/macros/s/AKfycbzYP3Zmfm5sgKiy00nctMPxWubYzH7TumBdd8tLNnPz_faS31VTvsOzBoNl79t2yo4/exec';
 
-  // ── TUNING ──────────────────────────────────────────────────────────────
-  const THRESHOLD     = 0.42;
-  const DETECT_FRAMES = 3;
-  const REG_FRAMES    = 5;
-  const FRAME_GAP_MS  = 80;
-  const INPUT_SIZE    = 128;
-  const MIN_SCORE     = 0.65;
-  // ────────────────────────────────────────────────────────────────────────
+  // ── TUNING ────────────────────────────────────────────────────
+  const THRESHOLD      = 0.45;
+  const DETECT_FRAMES  = 3;
+  const REG_FRAMES     = 5;
+  const FRAME_GAP_MS   = 100;
+  const MIN_SCORE      = 0.60;
+  const MIN_FACE_RATIO = 0.05;
+  const MODEL_CACHE    = 'ghk-school-models-v1';
+  const MODEL_URL      = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/';
+  // ─────────────────────────────────────────────────────────────
 
-  const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/';
-  const CACHE_KEY = 'ghk-models-v3';
+  function pickInputSize() {
+    const cores = navigator.hardwareConcurrency || 2;
+    const memGB = navigator.deviceMemory      || 2;
+    if (cores <= 2 || memGB <= 1) return 128;
+    return 160;
+  }
 
-  var faceapi     = null;
-  var faceMatcher = null;
-  var detectOpts  = null;
-  var isReady     = false;
-  var isWarmedUp  = false;   // ← NEW: tracks warmup state
-  var userLoc     = null;
+  var faceapi      = null;
+  var faceMatcher  = null;
+  var detectOpts   = null;
+  var isReady      = false;
+  var isBusy       = false;
+  var userLocation = null;
 
-  const video = document.getElementById('video');
+  const video      = document.getElementById('video');
+  const INPUT_SIZE = pickInputSize();
 
-  // ── Clock ────────────────────────────────────────────────────────────────
+  /* ── Clock ── */
   function tickClock() {
     document.getElementById('clock').textContent =
-      new Date().toLocaleTimeString([], { hour:'2-digit', minute:'2-digit', hour12:true });
+      new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', hour12:true});
   }
-  tickClock();
-  setInterval(tickClock, 15000);
+  tickClock(); setInterval(tickClock, 10000);
 
-  // ── GPS (non-blocking) ───────────────────────────────────────────────────
+  /* ── GPS ── */
   if (navigator.geolocation) {
     navigator.geolocation.getCurrentPosition(
-      function(p){ userLoc = { lat: p.coords.latitude, lng: p.coords.longitude }; },
-      function(){},
-      { timeout: 8000 }
+      function(p) { userLocation = {lat:p.coords.latitude, lng:p.coords.longitude}; },
+      function() {}, {timeout:8000}
     );
   }
 
-  // ── STEP 1: Camera starts immediately ───────────────────────────────────
+  /* ── STEP 1: Camera ── */
   navigator.mediaDevices.getUserMedia({
-    video: { facingMode:'user', width:{ ideal:320 }, height:{ ideal:240 } },
+    video: {facingMode:'user', width:{ideal:320}, height:{ideal:240}},
     audio: false
   }).then(function(stream) {
     video.srcObject = stream;
     video.play();
-    setStatus('Camera ready — loading AI…', 'amber');
+    prog('Camera ready — loading AI…', 10);
     loadFaceApiScript();
   }).catch(function(err) {
-    setStatus('Camera error: ' + err.message, 'red');
-    setBtn('btn-punch', false, '❌ Camera unavailable');
+    document.getElementById('ld-text').innerHTML =
+      '❌ Camera error: ' + err.message +
+      '<br><br>Allow camera in browser settings, then reload.';
+    document.getElementById('ld-fill').style.background = '#f87171';
   });
 
-  // ── STEP 2: Load face-api.js ─────────────────────────────────────────────
+  /* ── STEP 2: Load face-api.js dynamically ── */
   function loadFaceApiScript() {
-    var s = document.createElement('script');
-    s.src = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.js';
+    var s   = document.createElement('script');
+    s.src   = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.js';
+    s.async = true;
     s.onload  = function() { faceapi = window.faceapi; loadModels(); };
-    s.onerror = function() { setStatus('Failed to load AI — check internet', 'red'); };
+    s.onerror = function() {
+      document.getElementById('ld-text').innerHTML =
+        '❌ Failed to load AI library.<br>Check internet and reload.';
+    };
     document.head.appendChild(s);
   }
 
-  // ── STEP 3: Load all 3 models in parallel ────────────────────────────────
+  /* ── STEP 3: Load models + cache + warm-up + load DB ── */
   async function loadModels() {
-    prog('Loading AI models…', 15);
+    prog('Loading AI models…', 25);
     try {
       var cache = null;
-      try { cache = await caches.open(CACHE_KEY); } catch(e) {}
+      try { cache = await caches.open(MODEL_CACHE); } catch(e) {}
       if (cache) {
         var origFetch = window.fetch;
         window.fetch = async function(url, opts) {
-          if (typeof url === 'string' && url.indexOf('face-api') > -1) {
+          if (typeof url === 'string' && url.includes('face-api')) {
             try {
               var hit = await cache.match(url);
               if (hit) return hit;
@@ -302,372 +294,286 @@
         faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
       ]);
 
-      prog('Models ready — loading staff…', 88);
-
       detectOpts = new faceapi.TinyFaceDetectorOptions({
         inputSize:      INPUT_SIZE,
         scoreThreshold: MIN_SCORE
       });
 
-      // ── STEP 4: Load staff database + warmup IN PARALLEL ─────────────────
-      // Warmup runs a silent dummy detection while staff data loads from sheet.
-      // Both happen at the same time → no extra wait added.
-      await Promise.all([
-        loadDatabase(),
-        warmupDetector()
-      ]);
+      prog('Warming up AI…', 78);
+      await warmUp();
 
-      document.getElementById('load-banner').style.display = 'none';
+      prog('Loading staff…', 90);
+      await loadDatabase();
+
+      document.getElementById('ld-fill').style.width = '100%';
+      setTimeout(function() {
+        document.getElementById('ld-overlay').style.display = 'none';
+        document.getElementById('oval').style.display = 'block';
+      }, 350);
 
     } catch(err) {
-      setStatus('❌ ' + err.message, 'red');
-      document.getElementById('load-txt').textContent = '❌ ' + err.message;
+      document.getElementById('ld-text').innerHTML =
+        '❌ ' + err.message + '<br><br>Reload the page to try again.';
+      document.getElementById('ld-fill').style.background = '#f87171';
     }
   }
 
-  // ── WARMUP: run 2 silent detections immediately after models load ────────
-  // The first real call to the TensorFlow graph is always slow (~300–800ms)
-  // because WebGL shaders need to compile. By running dummy detections now,
-  // the shaders are already compiled and cached when a real user punches in.
-  // We show a subtle green pulse on the oval ring so it feels alive, not frozen.
-  async function warmupDetector() {
-    var ring = document.getElementById('warmup-ring');
-    ring.style.display = 'block';
-    try {
-      // Run 2 warmup frames — first compiles shaders, second confirms stable
-      for (var i = 0; i < 2; i++) {
-        await faceapi
-          .detectSingleFace(video, detectOpts)
-          .withFaceLandmarks(true)
-          .withFaceDescriptor();
-        await sleep(60);
-      }
-    } catch(e) {
-      // Warmup errors are totally fine — just means no face visible yet
-    }
-    ring.style.display = 'none';
-    isWarmedUp = true;
+  async function warmUp() {
+    const canvas = document.createElement('canvas');
+    canvas.width = canvas.height = 128;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#555';
+    ctx.fillRect(0, 0, 128, 128);
+    try { await faceapi.detectSingleFace(canvas, detectOpts); } catch(e) {}
   }
 
   function prog(msg, pct) {
-    document.getElementById('load-txt').textContent  = msg;
-    document.getElementById('load-pct').textContent  = pct + '%';
-    document.getElementById('load-fill').style.width = pct + '%';
+    document.getElementById('ld-text').innerHTML = msg;
+    document.getElementById('ld-fill').style.width = pct + '%';
   }
 
-  // ── LOAD STAFF DATABASE ──────────────────────────────────────────────────
+  /* ── Load staff database ── */
   async function loadDatabase() {
-    try {
-      var res = await api('getUsers', {});
-      if (res.error) throw new Error(res.error);
-      if (!res.users || res.users.length === 0) {
-        setStatus('No staff registered yet', 'amber');
-        setBtn('btn-punch', true, '⚠️ No staff registered');
-        return;
-      }
-
-      var labeled = res.users.map(function(u) {
-        var raw = JSON.parse(u.descriptor);
-        var descriptors;
-        if (Array.isArray(raw[0])) {
-          descriptors = raw.map(function(d) { return new Float32Array(d); });
-        } else {
-          descriptors = [ new Float32Array(raw) ];
-        }
-        return new faceapi.LabeledFaceDescriptors(u.label, descriptors);
-      });
-
-      faceMatcher = new faceapi.FaceMatcher(labeled, THRESHOLD);
-      isReady = true;
-      setStatus(res.users.length + ' staff loaded — ready!', 'green');
-      setBtn('btn-punch', false, '✅  Mark Attendance');
-    } catch(err) {
-      setStatus('DB error: ' + err.message, 'red');
+    const res = await api('getUsers', {});
+    if (res.error) throw new Error(res.error);
+    if (!res.users || res.users.length === 0) {
+      setStatus('No staff yet — tap Add New Staff', 'amber');
+      showPanel('attend'); return;
     }
+
+    const labeled = res.users.map(function(u) {
+      const raw = JSON.parse(u.descriptor);
+      const descriptors = Array.isArray(raw[0])
+        ? raw.map(function(d) { return new Float32Array(d); })
+        : [new Float32Array(raw)];
+      return new faceapi.LabeledFaceDescriptors(u.label, descriptors);
+    });
+
+    faceMatcher = new faceapi.FaceMatcher(labeled, THRESHOLD);
+    isReady     = true;
+    setStatus(res.users.length + ' staff loaded — ready!', 'green');
+    showPanel('attend');
   }
 
-  // ── CAPTURE FRAMES ───────────────────────────────────────────────────────
-  async function captureFrames(count) {
-    var descriptors = [];
-    for (var i = 0; i < count; i++) {
+  /* ── Smart frame capture ── */
+  async function captureFrames(needed) {
+    const descriptors = [];
+    const maxAttempts = needed * 2;
+
+    for (let attempt = 0; attempt < maxAttempts && descriptors.length < needed; attempt++) {
       try {
-        var det = await faceapi
+        const det = await faceapi
           .detectSingleFace(video, detectOpts)
           .withFaceLandmarks(true)
           .withFaceDescriptor();
+
         if (det && det.detection.score >= MIN_SCORE) {
-          descriptors.push(det.descriptor);
+          const box       = det.detection.box;
+          const frameW    = video.videoWidth  || 320;
+          const frameH    = video.videoHeight || 240;
+          const faceRatio = (box.width * box.height) / (frameW * frameH);
+
+          if (faceRatio >= MIN_FACE_RATIO) {
+            descriptors.push(det.descriptor);
+          }
         }
       } catch(e) {}
-      if (i < count - 1) await sleep(FRAME_GAP_MS);
+
+      if (descriptors.length < needed && attempt < maxAttempts - 1) {
+        await sleep(FRAME_GAP_MS);
+      }
     }
-    return descriptors.length >= Math.ceil(count * 0.6) ? descriptors : null;
+
+    return descriptors.length >= needed ? descriptors : null;
   }
 
-  function sleep(ms) { return new Promise(function(r){ setTimeout(r, ms); }); }
+  function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
-  // ── VOTING MATCH ─────────────────────────────────────────────────────────
+  /* ── Voting-based matching ── */
   function votingMatch(descriptors) {
-    var votes = {};
+    const votes = {};
     descriptors.forEach(function(desc) {
-      var match = faceMatcher.findBestMatch(desc);
-      var lbl   = match.label;
-      if (!votes[lbl]) votes[lbl] = { count: 0, totalDist: 0 };
+      const m   = faceMatcher.findBestMatch(desc);
+      const lbl = m.label;
+      if (!votes[lbl]) votes[lbl] = {count:0, totalDist:0};
       votes[lbl].count++;
-      votes[lbl].totalDist += match.distance;
+      votes[lbl].totalDist += m.distance;
     });
 
-    var bestLabel = null, bestCount = 0, bestAvgDist = Infinity;
+    let bestLabel = null, bestCount = 0, bestAvgDist = Infinity;
     Object.keys(votes).forEach(function(lbl) {
-      var v       = votes[lbl];
-      var avgDist = v.totalDist / v.count;
-      if (v.count > bestCount || (v.count === bestCount && avgDist < bestAvgDist)) {
-        bestLabel   = lbl;
-        bestCount   = v.count;
-        bestAvgDist = avgDist;
+      const v = votes[lbl], avg = v.totalDist / v.count;
+      if (v.count > bestCount || (v.count === bestCount && avg < bestAvgDist)) {
+        bestLabel = lbl; bestCount = v.count; bestAvgDist = avg;
       }
     });
 
-    if (!bestLabel) return null;
-    if ((bestCount / descriptors.length) < 0.5) return null;
-    if (bestLabel === 'unknown') return null;
-
-    return { label: bestLabel, avgDistance: bestAvgDist, frameCount: descriptors.length };
+    if (!bestLabel)                           return null;
+    if (bestCount / descriptors.length < 0.5) return null;
+    if (bestLabel === 'unknown')              return null;
+    return {label: bestLabel, avgDistance: bestAvgDist, frameCount: descriptors.length};
   }
 
-  // ── MARK ATTENDANCE — optimistic UI ─────────────────────────────────────
-  // Face recognition happens first. As soon as we have a match, the success
-  // screen appears immediately. The Google Sheet save happens in the background.
-  // A small status pill on the success screen shows: Saving → Saved / Failed.
-  // If it fails, a red toast also appears at the top of the screen.
+  /* ── Mark Attendance ── */
   document.getElementById('btn-punch').addEventListener('click', async function() {
-    if (!isReady) { showAlert('alert-attend', '⏳ Still loading — please wait.', 'info'); return; }
-
+    if (!isReady || isBusy) {
+      if (!isReady) showAlert('alert-attend', '⏳ Still loading — please wait.', 'info');
+      return;
+    }
+    isBusy = true;
     setBtn('btn-punch', true, '🔍 Scanning… hold still');
-    showScanBar(true);
 
-    var frames = await captureFrames(DETECT_FRAMES);
-    showScanBar(false);
-
+    const frames = await captureFrames(DETECT_FRAMES);
     if (!frames) {
+      isBusy = false;
       setBtn('btn-punch', false, '✅  Mark Attendance');
-      showAlert('alert-attend', '❌ No face detected. Centre your face in the oval and hold still.', 'error');
+      showAlert('alert-attend', '❌ No face detected. Move closer and ensure good lighting.', 'error');
       return;
     }
 
-    var result = votingMatch(frames);
+    const result = votingMatch(frames);
     if (!result) {
+      isBusy = false;
       setBtn('btn-punch', false, '✅  Mark Attendance');
-      showAlert('alert-attend', '❌ Face not recognised. Not registered, or try better lighting.', 'error');
+      showAlert('alert-attend', '❌ Face not recognised. Are you registered?', 'error');
       return;
     }
 
+    showAlert('alert-attend', '⏳ Saving for ' + result.label + '…', 'info');
+    const res = await api('recordAttendance', {name: result.label, gps: userLocation});
+    isBusy = false;
     setBtn('btn-punch', false, '✅  Mark Attendance');
 
-    // ── Optimistic: build predicted punch data and show success screen NOW ──
-    var now      = new Date();
-    var timeStr  = now.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit', hour12:false });
-    var dateStr  = now.toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' });
-    var conf     = Math.round(Math.max(0, (1 - result.avgDistance / THRESHOLD)) * 100);
-
-    // Show success screen immediately — type/hours will be filled once sheet responds
-    showSS('IN', result.label, timeStr, dateStr, '', conf, result.frameCount, true);
-
-    // ── Background save ─────────────────────────────────────────────────────
-    api('recordAttendance', { name: result.label, gps: userLoc })
-      .then(function(res) {
-        if (res.error) {
-          // Sheet returned a business error (e.g. cooldown, already completed)
-          setSaveStatus('failed');
-          showFailToast('⚠️ ' + res.error);
-          return;
-        }
-        // Update the success screen with real server data
-        setSaveStatus('saved');
-        updateSSAfterSave(res.type, res.name, res.time, res.date, res.workingHours, conf, result.frameCount);
-      })
-      .catch(function(err) {
-        setSaveStatus('failed');
-        showFailToast('⚠️ Save failed — check internet');
-      });
+    if (res.error) { showAlert('alert-attend', '⚠️ ' + res.error, 'warning'); return; }
+    showSuccess(res.type, res.name, res.time, res.date, res.workingHours);
   });
 
-  // ── REGISTER — optimistic UI ─────────────────────────────────────────────
+  /* ── Register New Staff ── */
+  document.getElementById('btn-new-user').addEventListener('click', function() {
+    showPanel('register');
+    document.getElementById('reg-name').focus();
+  });
+  document.getElementById('btn-cancel').addEventListener('click', function() {
+    document.getElementById('reg-name').value = '';
+    showPanel('attend');
+  });
   document.getElementById('btn-save').addEventListener('click', async function() {
-    var name = document.getElementById('reg-name').value.trim();
-    if (!name)    { showAlert('alert-reg', '⚠️ Enter staff name first.', 'error'); return; }
-    if (!faceapi) { showAlert('alert-reg', '⏳ AI still loading, please wait.', 'info'); return; }
+    const name = document.getElementById('reg-name').value.trim();
+    if (!name) { showAlert('alert-reg', '⚠️ Please enter staff name first.', 'error'); return; }
+    if (isBusy) return;
+    isBusy = true;
 
     setBtn('btn-save', true, '📸 Capturing face samples…');
     showAlert('alert-reg', '⏳ Hold still — capturing face samples…', 'info');
-    showScanBar(true);
 
-    var frames = await captureFrames(REG_FRAMES);
-    showScanBar(false);
+    const frames = await captureFrames(REG_FRAMES);
+    isBusy = false;
 
     if (!frames) {
       setBtn('btn-save', false, '📸  Scan & Save Face');
-      showAlert('alert-reg', '❌ Face not detected. Ensure good lighting and face the oval directly.', 'error');
+      showAlert('alert-reg', '❌ Face not detected clearly. Move closer and face the camera directly.', 'error');
       return;
     }
 
-    var savedName = name;
+    showAlert('alert-reg', '⏳ Saving ' + frames.length + ' face samples to Google Sheet…', 'info');
+
+    const payload = JSON.stringify(frames.map(d => Array.from(d)));
+    const res = await api('registerUser', {name: name, descriptor: payload});
     setBtn('btn-save', false, '📸  Scan & Save Face');
-    document.getElementById('reg-name').value = '';
-    goHome();
 
-    // ── Show success screen IMMEDIATELY ──────────────────────────────────
-    showSS('register', savedName, '', '', '', null, frames.length, true);
-
-    // ── Save in background ────────────────────────────────────────────────
-    var descriptorPayload = JSON.stringify(frames.map(function(d) { return Array.from(d); }));
-    api('registerUser', { name: savedName, descriptor: descriptorPayload })
-      .then(function(res) {
-        if (res.success) {
-          setSaveStatus('saved');
-          loadDatabase(); // refresh matcher silently
-        } else {
-          setSaveStatus('failed');
-          showFailToast('⚠️ ' + (res.message || 'Registration save failed'));
-        }
-      })
-      .catch(function() {
-        setSaveStatus('failed');
-        showFailToast('⚠️ Registration save failed — check internet');
-      });
+    if (res.success) {
+      document.getElementById('reg-name').value = '';
+      showPanel('attend');
+      await loadDatabase();
+      showSuccess('register', name, '', '', '');
+    } else {
+      showAlert('alert-reg', '⚠️ ' + res.message, 'error');
+    }
   });
 
-  document.getElementById('btn-cancel').addEventListener('click', goHome);
-
-  // ── REPORT ───────────────────────────────────────────────────────────────
+  /* ── Today's Report ── */
+  document.getElementById('btn-report').addEventListener('click', async function() {
+    document.getElementById('report-section').style.display = 'block';
+    document.getElementById('rpt-count').textContent = '…';
+    document.getElementById('rpt-list').innerHTML = '<p style="font-size:0.82rem;color:#888;padding:6px 0">Loading…</p>';
+    const res = await api('getDailyReport', {});
+    document.getElementById('rpt-count').textContent = res.count || 0;
+    if (!res.staff || res.staff.length === 0) {
+      document.getElementById('rpt-list').innerHTML =
+        '<p style="font-size:0.82rem;color:#888;text-align:center;padding:8px">No attendance today yet.</p>';
+      return;
+    }
+    var html = '';
+    res.staff.forEach(function(s, i) {
+      var inB  = s.inTime  ? '<span class="badge-in">IN '  + s.inTime  + '</span>' : '<span style="color:#aaa;font-size:0.75rem">No IN</span>';
+      var outB = s.outTime ? '<span class="badge-out">OUT ' + s.outTime + '</span>' : '<span style="color:#aaa;font-size:0.75rem">Still in</span>';
+      var hrs  = s.workingHours ? '<span class="rhours">⏱ ' + s.workingHours + '</span>' : '';
+      var map  = s.mapLink ? ' <a href="'+s.mapLink+'" target="_blank">📍</a>' : '';
+      html += '<div class="rrow"><div><span class="rname">' + (i+1) + '.  ' + s.name + map +
+        '</span><br><span class="rtimes">' + inB + '  ' + outB + '</span></div><div>' + hrs + '</div></div>';
+    });
+    document.getElementById('rpt-list').innerHTML = html;
+  });
   document.getElementById('btn-close-rpt').addEventListener('click', function() {
     document.getElementById('report-section').style.display = 'none';
   });
 
-  async function loadReport() {
-    document.getElementById('report-section').style.display = 'block';
-    document.getElementById('rpt-count').textContent = '…';
-    document.getElementById('rpt-list').innerHTML = '<p style="font-size:0.8rem;color:#888;padding:8px 0;">Loading…</p>';
-    try {
-      var res = await api('getDailyReport', {});
-      document.getElementById('rpt-count').textContent = res.count || 0;
-      if (!res.staff || !res.staff.length) {
-        document.getElementById('rpt-list').innerHTML = '<p style="font-size:0.8rem;color:#888;text-align:center;padding:8px;">No attendance today yet.</p>';
-        return;
-      }
-      var html = '';
-      res.staff.forEach(function(s, i) {
-        var inB  = s.inTime  ? '<span class="badge-in">IN '  + s.inTime  + '</span>' : '<span style="color:#bbb;font-size:0.7rem">—</span>';
-        var outB = s.outTime ? '<span class="badge-out">OUT ' + s.outTime + '</span>' : '<span style="color:#bbb;font-size:0.7rem">Still in</span>';
-        var hrs  = s.workingHours ? '<span class="rhours">⏱ ' + s.workingHours + '</span>' : '';
-        var map  = s.mapLink ? ' <a href="' + s.mapLink + '" target="_blank" style="text-decoration:none;">📍</a>' : '';
-        html += '<div class="rrow"><div><div class="rname">' + (i+1) + '. ' + s.name + map + '</div><div class="rtimes">' + inB + ' &nbsp; ' + outB + '</div></div><div>' + hrs + '</div></div>';
-      });
-      document.getElementById('rpt-list').innerHTML = html;
-      document.getElementById('report-section').scrollIntoView({ behavior:'smooth' });
-    } catch(e) {
-      document.getElementById('rpt-list').innerHTML = '<p style="color:red;font-size:0.8rem;">Error loading report.</p>';
-    }
-  }
+  /* ── Success Screen ── */
+  function showSuccess(type, name, time, date, hours) {
+    const isReg = type === 'register', isIN = type === 'IN', isOUT = type === 'OUT';
+    const circle  = document.getElementById('ss-circle');
+    const badge   = document.getElementById('ss-badge');
+    const hoursEl = document.getElementById('ss-hours');
 
-  // ── NAVIGATION ───────────────────────────────────────────────────────────
-  function goHome() {
-    showPanel('attend');
-    document.getElementById('report-section').style.display = 'none';
-  }
-  function goAdd() {
-    if (!faceapi) { alert('AI models still loading. Please wait a moment.'); return; }
-    showPanel('register');
-    setTimeout(function(){ document.getElementById('reg-name').focus(); }, 100);
-  }
-  function goReport() {
-    showPanel('attend');
-    loadReport();
-  }
+    circle.textContent = isReg ? '🎉' : (isIN ? '🟢' : '🔴');
+    circle.className   = 'ss-circle ' + (isReg ? 'reg-circle' : (isIN ? 'in-circle' : 'out-circle'));
+    badge.textContent  = isReg ? 'REGISTERED' : (isIN ? 'PUNCHED IN' : 'PUNCHED OUT');
+    badge.className    = 'ss-badge ' + (isReg ? 'reg' : (isIN ? 'in' : 'out'));
 
-  // ── SUCCESS SCREEN ───────────────────────────────────────────────────────
-  function showSS(type, name, time, date, hours, conf, frames, isSaving) {
-    var isReg = type === 'register', isIN = type === 'IN', isOUT = type === 'OUT';
-    document.getElementById('ss-icon').textContent  = isReg ? '🎉' : (isIN ? '🟢' : '🔴');
-    document.getElementById('ss-badge').textContent = isReg ? 'REGISTERED' : (isIN ? 'PUNCHED IN' : 'PUNCHED OUT');
-    document.getElementById('ss-badge').className   = 'ss-badge ' + (isReg ? 'reg' : (isIN ? 'in' : 'out'));
-    document.getElementById('ss-name').textContent  = name;
-    document.getElementById('ss-time').textContent  = isReg ? 'Face scanned successfully' : ('🕐 ' + time + '   📅 ' + date);
-    var hoursEl = document.getElementById('ss-hours');
-    if (isOUT && hours) { hoursEl.textContent = '⏱ Working hours: ' + hours; hoursEl.style.display = 'block'; }
-    else { hoursEl.style.display = 'none'; }
-    var confEl = document.getElementById('ss-conf');
-    if (conf !== null && conf !== undefined) {
-      confEl.textContent = '🔍 Confidence: ' + conf + '%   |   ' + frames + ' frames matched';
+    document.getElementById('ss-name').textContent = name;
+    document.getElementById('ss-time').textContent = isReg
+      ? 'Face saved to Google Sheet'
+      : ('🕐 ' + time + '   📅 ' + date);
+
+    if (isOUT && hours) {
+      hoursEl.textContent   = '⏱  Total working hours: ' + hours;
+      hoursEl.style.display = 'block';
     } else {
-      confEl.textContent = '📸 ' + frames + ' face samples scanned';
+      hoursEl.style.display = 'none';
     }
-    // Save status pill
-    setSaveStatus(isSaving ? 'saving' : 'saved');
-    document.getElementById('ss').classList.add('show');
+    document.getElementById('success-screen').classList.add('show');
   }
 
-  // Called after background save completes — updates screen without re-showing it
-  function updateSSAfterSave(type, name, time, date, hours, conf, frames) {
-    var isOUT = type === 'OUT';
-    document.getElementById('ss-badge').textContent = type === 'IN' ? 'PUNCHED IN' : 'PUNCHED OUT';
-    document.getElementById('ss-badge').className   = 'ss-badge ' + (type === 'IN' ? 'in' : 'out');
-    document.getElementById('ss-icon').textContent  = type === 'IN' ? '🟢' : '🔴';
-    document.getElementById('ss-time').textContent  = '🕐 ' + time + '   📅 ' + date;
-    var hoursEl = document.getElementById('ss-hours');
-    if (isOUT && hours) { hoursEl.textContent = '⏱ Working hours: ' + hours; hoursEl.style.display = 'block'; }
-    else { hoursEl.style.display = 'none'; }
+  function closeSuccess() {
+    document.getElementById('success-screen').classList.remove('show');
   }
 
-  function setSaveStatus(state) {
-    var el = document.getElementById('ss-save-status');
-    el.className = 'ss-save-status ' + state;
-    if (state === 'saving') el.textContent = '💾 Saving to sheet…';
-    if (state === 'saved')  el.textContent = '✅ Saved to sheet';
-    if (state === 'failed') el.textContent = '❌ Sheet save failed';
+  /* ── Helpers ── */
+  async function api(action, payload) {
+    const res = await fetch(GAS_URL + '?action=' + action, {
+      method:'POST', mode:'cors',
+      headers:{'Content-Type':'text/plain'},
+      body: JSON.stringify(payload)
+    });
+    return res.json();
   }
-
-  function closeSS() { document.getElementById('ss').classList.remove('show'); }
-
-  // ── FAILURE TOAST ────────────────────────────────────────────────────────
-  var toastTimer = null;
-  function showFailToast(msg) {
-    var t = document.getElementById('fail-toast');
-    t.textContent = msg;
-    t.classList.add('show');
-    if (toastTimer) clearTimeout(toastTimer);
-    toastTimer = setTimeout(function(){ t.classList.remove('show'); }, 5000);
-  }
-
-  // ── HELPERS ──────────────────────────────────────────────────────────────
-  function showPanel(name) {
-    document.getElementById('panel-attend').classList.toggle('hidden',   name !== 'attend');
-    document.getElementById('panel-register').classList.toggle('hidden', name !== 'register');
-  }
-  function showScanBar(on) { document.getElementById('scan-bar').style.display = on ? 'block' : 'none'; }
   function setStatus(msg, color) {
     document.getElementById('stext').textContent = msg;
     document.getElementById('sdot').className    = 'dot ' + color;
   }
+  function showPanel(name) {
+    document.getElementById('panel-attend').classList.toggle('hidden',   name !== 'attend');
+    document.getElementById('panel-register').classList.toggle('hidden', name !== 'register');
+  }
   function setBtn(id, disabled, label) {
-    var b = document.getElementById(id);
-    b.disabled    = disabled;
-    b.textContent = label;
+    const b = document.getElementById(id);
+    b.disabled = disabled; b.textContent = label;
   }
   function showAlert(id, msg, type) {
-    var el = document.getElementById(id);
+    const el = document.getElementById(id);
     el.textContent = msg;
     el.className   = 'alert ' + type + ' show';
-    if (type !== 'info') setTimeout(function(){ el.classList.remove('show'); }, 5000);
-  }
-  async function api(action, payload) {
-    var res = await fetch(GAS_URL + '?action=' + action, {
-      method:  'POST',
-      mode:    'cors',
-      headers: { 'Content-Type': 'text/plain' },
-      body:    JSON.stringify(payload)
-    });
-    return res.json();
+    if (type !== 'info') setTimeout(() => el.classList.remove('show'), 4500);
   }
 </script>
 </body>
