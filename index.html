@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-title" content="GHK Attend">
+  <meta name="apple-mobile-web-app-title" content="GHK Lab">
   <meta name="mobile-web-app-capable" content="yes">
   <title>GHK Lab Attendance</title>
   <style>
@@ -48,6 +48,11 @@
     .dot.red   { background:#dc3545; }
     @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
 
+    /* Debug bar — shows which sheet is connected */
+    .debug-bar { background:#f8f9fa; border-bottom:1px solid #e0e0e0; padding:6px 16px; font-size:0.7rem; color:#888; display:flex; align-items:center; gap:6px; }
+    .debug-bar .db-dot { width:7px; height:7px; border-radius:50%; background:#28a745; flex-shrink:0; }
+    .debug-bar .db-label { font-weight:700; color:#333; }
+
     /* Punch button */
     .panel { padding:16px 18px 22px; }
     .btn-punch {
@@ -58,7 +63,6 @@
       -webkit-tap-highlight-color:transparent;
       background:var(--green-btn); border-color:var(--green-btn);
     }
-    .btn-punch.out-mode { background:var(--red-btn); border-color:var(--red-btn); }
     .btn-punch:disabled { background:#aaa; border-color:#aaa; cursor:not-allowed; }
     .btn-punch:active:not(:disabled) { transform:scale(0.97); }
 
@@ -128,7 +132,7 @@
 <div class="app">
 
   <div class="header">
-    <div class="logo">GHK <span></span> Attendance</div>
+    <div class="logo">GHK <span>Lab</span> Attendance</div>
     <div class="clock" id="clock">--:-- --</div>
   </div>
 
@@ -143,9 +147,16 @@
       </div>
     </div>
 
+    <!-- Status bar -->
     <div class="sbar">
       <div class="dot amber" id="sdot"></div>
       <span id="stext">Starting up…</span>
+    </div>
+
+    <!-- Debug bar — confirms which sheet is live -->
+    <div class="debug-bar">
+      <div class="db-dot" id="db-dot" style="background:#ffc107"></div>
+      <span>Sheet: <span class="db-label" id="db-label">connecting…</span></span>
     </div>
 
     <!-- Attendance panel -->
@@ -191,23 +202,30 @@
 </div>
 
 <script>
-  // ▼▼▼ GAS URL FROM v3.1 BACKEND ▼▼▼
+  // ════════════════════════════════════════════════════════
+  //  GHK LAB — separate Google Sheet / GAS deployment
+  //  This URL is DIFFERENT from GHK School's URL
+  // ════════════════════════════════════════════════════════
   const GAS_URL = 'https://script.google.com/macros/s/AKfycbwLxt7O0pMaEdtzMO2OqJ3CdgK-RJubSif01rznrG_fiE9KcHmzWTyepQdNDUoutks/exec';
 
-  // ── TUNING ────────────────────────────────────────────────────
+  // ── Cache key is UNIQUE to GHK Lab ──────────────────────
+  // Using a different key than GHK School ('ghk-school-models-v1')
+  // forces the browser to use a fresh cache for this deployment.
+  // This prevents any cross-contamination of cached model data.
+  const MODEL_CACHE = 'ghk-lab-models-v1';
+  const MODEL_URL   = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/';
+
+  // ── TUNING ───────────────────────────────────────────────
   const THRESHOLD      = 0.45;
   const DETECT_FRAMES  = 3;
   const REG_FRAMES     = 5;
   const FRAME_GAP_MS   = 100;
   const MIN_SCORE      = 0.60;
   const MIN_FACE_RATIO = 0.05;
-  const MODEL_CACHE    = 'ghk-school-models-v1';
-  const MODEL_URL      = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/';
-  // ─────────────────────────────────────────────────────────────
 
   function pickInputSize() {
     const cores = navigator.hardwareConcurrency || 2;
-    const memGB = navigator.deviceMemory      || 2;
+    const memGB = navigator.deviceMemory || 2;
     if (cores <= 2 || memGB <= 1) return 128;
     return 160;
   }
@@ -221,6 +239,14 @@
 
   const video      = document.getElementById('video');
   const INPUT_SIZE = pickInputSize();
+
+  // ── Confirm on page load that this is GHK Lab ───────────
+  // Shows the last 20 chars of the GAS URL in the debug bar
+  // so you can visually confirm which backend is connected.
+  (function confirmSheet() {
+    var tail = GAS_URL.slice(-28);
+    document.getElementById('db-label').textContent = '…' + tail;
+  })();
 
   /* ── Clock ── */
   function tickClock() {
@@ -270,6 +296,8 @@
   async function loadModels() {
     prog('Loading AI models…', 25);
     try {
+
+      // ── Cache wrapper (GHK Lab cache, separate from School) ──
       var cache = null;
       try { cache = await caches.open(MODEL_CACHE); } catch(e) {}
       if (cache) {
@@ -302,7 +330,7 @@
       prog('Warming up AI…', 78);
       await warmUp();
 
-      prog('Loading staff…', 90);
+      prog('Loading staff from GHK Lab sheet…', 90);
       await loadDatabase();
 
       document.getElementById('ld-fill').style.width = '100%';
@@ -332,14 +360,31 @@
     document.getElementById('ld-fill').style.width = pct + '%';
   }
 
-  /* ── Load staff database ── */
+  /* ── Load staff database from GHK Lab sheet ── */
   async function loadDatabase() {
     const res = await api('getUsers', {});
-    if (res.error) throw new Error(res.error);
-    if (!res.users || res.users.length === 0) {
-      setStatus('No staff yet — tap Add New Staff', 'amber');
-      showPanel('attend'); return;
+
+    // Update debug bar with live confirmation
+    var dbDot   = document.getElementById('db-dot');
+    var dbLabel = document.getElementById('db-label');
+
+    if (res.error) {
+      dbDot.style.background = '#dc3545';
+      dbLabel.textContent    = 'ERROR — ' + res.error;
+      throw new Error(res.error);
     }
+
+    if (!res.users || res.users.length === 0) {
+      dbDot.style.background = '#ffc107';
+      dbLabel.textContent    = 'GHK Lab — no staff yet';
+      setStatus('No staff yet — tap Add New Staff', 'amber');
+      showPanel('attend');
+      return;
+    }
+
+    // Show count in debug bar to confirm correct sheet
+    dbDot.style.background = '#28a745';
+    dbLabel.textContent    = 'GHK Lab — ' + res.users.length + ' staff';
 
     const labeled = res.users.map(function(u) {
       const raw = JSON.parse(u.descriptor);
@@ -372,7 +417,6 @@
           const frameW    = video.videoWidth  || 320;
           const frameH    = video.videoHeight || 240;
           const faceRatio = (box.width * box.height) / (frameW * frameH);
-
           if (faceRatio >= MIN_FACE_RATIO) {
             descriptors.push(det.descriptor);
           }
@@ -475,7 +519,7 @@
       return;
     }
 
-    showAlert('alert-reg', '⏳ Saving ' + frames.length + ' face samples to Google Sheet…', 'info');
+    showAlert('alert-reg', '⏳ Saving ' + frames.length + ' face samples to GHK Lab sheet…', 'info');
 
     const payload = JSON.stringify(frames.map(d => Array.from(d)));
     const res = await api('registerUser', {name: name, descriptor: payload});
@@ -532,7 +576,7 @@
 
     document.getElementById('ss-name').textContent = name;
     document.getElementById('ss-time').textContent = isReg
-      ? 'Face saved to Google Sheet'
+      ? 'Face saved to GHK Lab sheet'
       : ('🕐 ' + time + '   📅 ' + date);
 
     if (isOUT && hours) {
@@ -548,7 +592,7 @@
     document.getElementById('success-screen').classList.remove('show');
   }
 
-  /* ── Helpers ── */
+  /* ── API helper — always calls GHK Lab GAS URL ── */
   async function api(action, payload) {
     const res = await fetch(GAS_URL + '?action=' + action, {
       method:'POST', mode:'cors',
@@ -557,6 +601,7 @@
     });
     return res.json();
   }
+
   function setStatus(msg, color) {
     document.getElementById('stext').textContent = msg;
     document.getElementById('sdot').className    = 'dot ' + color;
